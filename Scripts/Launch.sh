@@ -84,7 +84,7 @@ NUM_CORES="$(nproc --all)"
 BALLOON_NAME="Balloon"
 BALLOON_CMD="./${BALLOON_NAME} ${NUM_CORES}"
 MAYA_NAME="Maya"
-MAYA_CMD="LD_LIBRARY_PATH=<PATH TO LIB64 directory that contains libstdc++.so (usually /usr/lib64/)>:\$LD_LIBRARY_PATH ./${MAYA_NAME} ${MAYA_OPTS}"
+MAYA_CMD="LD_LIBRARY_PATH=/usr/lib:\$LD_LIBRARY_PATH ./${MAYA_NAME} ${MAYA_OPTS}"
 
 OUTFILE="/dev/null" #File where the output of the application run with Maya is stored
 LOGFILE="/dev/null" #File where the output of Maya is stored
@@ -167,9 +167,9 @@ function stopall {
     rm /dev/shm/powerBalloonMax.txt
 
     #Turn cores on
-    for ((core=0;core<NUM_CORES;core++)); do
-        echo 1 > /sys/devices/system/cpu/cpu${core}/online
-    done
+    #for ((core=0;core<NUM_CORES;core++)); do
+    #    echo 1 > /sys/devices/system/cpu/cpu${core}/online
+    #done
 
     #Turn turbo on
     echo 1 > /sys/devices/system/cpu/cpufreq/boost
@@ -182,8 +182,14 @@ stopall
 startall
 
 if [[ "$APPS" == "yourapp" ]]; then
-    #su <userid> -c "cmdline for your app" > $OUTFILE
+    su hwnam -c "/home/hwnam/parsec-3.0/bin/parsecmgmt -a run -p vips -i native" > vips.trace
 	sleep 1
+elif [[ "$APPS" == "vips" ]]; then
+    sleep 1
+    time1=$(date +%s)
+    su hwnam -c "/home/hwnam/parsec-3.0/bin/parsecmgmt -a run -p vips -i simlarge" > vips.trace
+    time2=$(date +%s)
+    sleep $((11-time2+time1))
 elif [[ "$APPS" == "empty" ]];then
     echo -n "Starting app empty at time " > $OUTFILE
     date +%s.%N >> $OUTFILE
@@ -193,7 +199,11 @@ elif [[ "$APPS" == "empty" ]];then
     echo -n "Completed app empty at time " >> $OUTFILE
     date +%s.%N >> $OUTFILE
 else
-    sleep 2
+    wtime=$(($RANDOM%4))
+    sleep $wtime
+    time1=$(date +%s)
+    su hwnam -c "/home/hwnam/parsec-3.0/bin/parsecmgmt -a run -p $APPS -i simlarge" > $APPS.trace
+    time2=$(date +%s)
+    sleep $((12-wait-time2+time1))
 fi
-
 stopall

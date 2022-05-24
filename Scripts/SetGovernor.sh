@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # File:   SetGovernors.sh
 # Author: Raghavendra Pradyumna Pothukuchi and Sweta Yamini Pothukuchi
@@ -25,7 +25,7 @@ fi
 #Turn each core on, set it be governed by userspace, or performance, as available
 for ((core = 0; core < numCores; core++)); do
     #Turn core on
-    echo 1 >/sys/devices/system/cpu/cpu${core}/online
+    #echo 1 >/sys/devices/system/cpu/cpu${core}/online
 
     if [ "$userspace_avail" == true ]; then
         #Write userspace governor

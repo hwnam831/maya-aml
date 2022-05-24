@@ -1,0 +1,10 @@
+./experiment.sh canneal; 
+./experiment.sh freqmine; 
+./experiment.sh vips; 
+./experiment.sh streamcluster
+./experiment.sh blackscholes;
+./experiment.sh bodytrack;
+./experiment.sh splash2x.radiosity;
+./experiment.sh splash2x.volrend;
+./experiment.sh splash2x.water_nsquared;
+./experiment.sh splash2x.water_spatial

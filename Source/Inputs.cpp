@@ -264,7 +264,7 @@ Input(name) {
     }
 
 #ifdef DEBUG
-    std::cout << "Write method is " << writeScalingFile?"userspace governor":"performance governor" << std::endl;
+    std::cout << "Write method is " << (writeScalingFile?"userspace governor":"performance governor") << std::endl;
 #endif
 
     updateValuesFromSystem();
