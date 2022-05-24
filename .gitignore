@@ -16,3 +16,7 @@ nbdist/
 /Scripts/plotTemporalAll.py
 /Scripts/Launch_1.sh
 /Scripts/extractAppLogs.py
+logs/
+maya_logs/
+Build/
+Dist/
