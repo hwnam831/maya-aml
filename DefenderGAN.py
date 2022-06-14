@@ -45,6 +45,15 @@ class RNNGenerator(nn.Module):
         else: 
             return out
 
+class NoiseInjector(nn.Module):
+    def __init__(self, noiselevel=0.1):
+        super().__init__()
+        self.noiselevel = nn.Parameter(torch.ones(1)*noiselevel)
+
+    def forward(self, x):
+        return x + torch.randn_like(x)*self.noiselevel
+        
+
 class RNNGenerator2(nn.Module):
     def __init__(self, dim, window=32, minpower=25.0, maxpower=225.0, noise=0.05):
         super().__init__()
@@ -53,14 +62,16 @@ class RNNGenerator2(nn.Module):
         self.maxpower = maxpower
         self.noise = noise
         self.encoder = nn.Sequential(
+            NoiseInjector(),
             nn.Conv1d(1,dim,window,1),
             nn.ReLU(),
-            nn.Dropout(0.1)
+            NoiseInjector(),
         )
 
         self.resblock = nn.GRU(dim,dim, num_layers=1, batch_first=True)
 
         self.decoder = nn.Sequential(
+            NoiseInjector(),
             nn.Linear(dim, 1),
             nn.Hardtanh()
         )
@@ -70,10 +81,6 @@ class RNNGenerator2(nn.Module):
         encoded = self.encoder(padded.view(padded.shape[0],1,padded.shape[1])).permute(0,2,1)
         res = encoded + self.resblock(encoded)[0]
         out = self.decoder(res).view(x.shape[0],x.shape[1]+1)[:,:-1]
-        if self.training == False:
-            out = out + self.noise*torch.rand_like(out) #[-1~7]
-        #out = F.relu(out+x)-x #[0,2]
-        #out = torch.minimum(out, torch.ones_like(out))
         
         if distill:
             return (encoded, res, out)
