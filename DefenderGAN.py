@@ -45,6 +45,41 @@ class RNNGenerator(nn.Module):
         else: 
             return out
 
+class RNNGenerator2(nn.Module):
+    def __init__(self, dim, window=32, minpower=25.0, maxpower=225.0, noise=0.05):
+        super().__init__()
+        self.window = window
+        self.minpower = minpower
+        self.maxpower = maxpower
+        self.noise = noise
+        self.encoder = nn.Sequential(
+            nn.Conv1d(1,dim,window,1),
+            nn.ReLU(),
+            nn.Dropout(0.1)
+        )
+
+        self.resblock = nn.GRU(dim,dim, num_layers=1, batch_first=True)
+
+        self.decoder = nn.Sequential(
+            nn.Linear(dim, 1),
+            nn.Hardtanh()
+        )
+
+    def forward(self, x, distill=False):
+        padded = F.pad(x,(self.window,0))
+        encoded = self.encoder(padded.view(padded.shape[0],1,padded.shape[1])).permute(0,2,1)
+        res = encoded + self.resblock(encoded)[0]
+        out = self.decoder(res).view(x.shape[0],x.shape[1]+1)[:,:-1]
+        if self.training == False:
+            out = out + self.noise*torch.rand_like(out) #[-1~7]
+        #out = F.relu(out+x)-x #[0,2]
+        #out = torch.minimum(out, torch.ones_like(out))
+        
+        if distill:
+            return (encoded, res, out)
+        else: 
+            return out
+
 def get_parser():
     """Get all the args"""
     parser = argparse.ArgumentParser()
