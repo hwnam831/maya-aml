@@ -4,8 +4,8 @@ import re
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, random_split
+import random
 
-filelist = os.listdir('logs')
 labels = {
     'blackscholes':0,
     'bodytrack':1,
@@ -20,8 +20,10 @@ labels = {
 }
 
 class MayaDataset(Dataset):
-    def __init__(self, logdir, window=500, std=None):
+    def __init__(self, logdir, minpower, maxpower, window=1000):
         self.window=window
+        self.minpower = minpower
+        self.maxpower = maxpower
         raw_filelist = os.listdir(logdir)
         self.matcher = re.compile(r"(.+)_(\d+)_log\.txt")
         self.dir = logdir
@@ -45,28 +47,91 @@ class MayaDataset(Dataset):
                     cnt = 1
                     continue
                 tokens = line.split(" ")
-                trace.append(float(tokens[1]))
+                val = float(tokens[1])
+                if( val < 0):
+                    continue
+                trace.append(val)
                 cnt += 1
-        #offset = random.randint(0,tracelen-500)
+        offset = random.randint(0,len(trace)-self.window)
+        offset = min(offset, random.randint(0,50))
         offset=0
-        return np.array(trace[offset:offset+self.window],dtype=np.float32), label
+        arr = np.array(trace[offset:offset+self.window],dtype=np.float32)
+
+        return (arr-self.minpower)/(self.maxpower-self.minpower), label
+
+class CNNCLF(nn.Module):
+    def __init__(self, window):
+        super().__init__()
+        self.clf = nn.Sequential(
+            nn.Conv1d(1,32,16,8,4),
+            nn.ReLU(),
+            nn.BatchNorm1d(32),
+            nn.Dropout(0.1),
+            nn.Conv1d(32,64,3,padding='same'),
+            nn.ReLU(),
+            nn.BatchNorm1d(64)
+        )
+        self.resblock = nn.Sequential(
+            nn.Conv1d(64,32,1),
+            nn.ReLU(),
+            nn.BatchNorm1d(32),
+            nn.Conv1d(32,32,1),
+            nn.ReLU(),
+            nn.BatchNorm1d(32),
+            nn.Conv1d(32,64,3,padding='same'),
+            nn.ReLU(),
+            nn.BatchNorm1d(64)
+        )
+        self.resblock2 = nn.Sequential(
+            nn.Conv1d(64,32,1),
+            nn.ReLU(),
+            nn.BatchNorm1d(32),
+            nn.Conv1d(32,32,1),
+            nn.ReLU(),
+            nn.BatchNorm1d(32),
+            nn.Conv1d(32,64,3,padding='same'),
+            nn.ReLU(),
+            nn.BatchNorm1d(64)
+        )
+        testinput  = torch.zeros(1,1,window)
+        testoutput = self.resblock2(self.resblock(self.clf(testinput)))
+
+        self.fc = nn.Sequential(
+            nn.Linear(testoutput.shape[1]*testoutput.shape[2],512),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(512,10)
+        )
+    def forward(self, x):
+        out = self.clf(x.view(x.shape[0],1,x.shape[1]))
+        out = out + self.resblock(out)
+        out = out + self.resblock2(out)
+        out = self.fc(out.view(x.shape[0],-1))
+        return out
 
 if __name__ == '__main__':
-    dataset = MayaDataset('logs', window=450)
-    dsets = random_split(dataset, [800,200])
+    dataset = MayaDataset('logs', minpower=25, maxpower=225, window=2000)
+    
+    dsets = random_split(dataset, [4000,1000])
     trainset = dsets[0]
-    trainloader = DataLoader(trainset, batch_size=16, num_workers=4)
-    valloader = DataLoader(trainset, batch_size=16, num_workers=4)
+    trainloader = DataLoader(trainset, batch_size=50, num_workers=8)
+    
     valset = dsets[1]
+    valloader = DataLoader(valset, batch_size=50, num_workers=8)
+    
     clf = nn.Sequential(
-        nn.Linear(dataset.window,512),
+        nn.Linear(dataset.window,1024),
         nn.ReLU(),
         nn.Dropout(0.1),
-        nn.Linear(512,512),
+        nn.Linear(1024,1024),
         nn.ReLU(),
         nn.Dropout(0.1),
-        nn.Linear(512,10)
+        nn.Linear(1024,10)
     ).cuda()
+    
+    
+    clf = CNNCLF(dataset.window).cuda()
+    
     optim_c = torch.optim.Adam(clf.parameters(), lr=0.0001)
     criterion = nn.CrossEntropyLoss()
     for e in range(100):

@@ -184,12 +184,6 @@ startall
 if [[ "$APPS" == "yourapp" ]]; then
     su hwnam -c "/home/hwnam/parsec-3.0/bin/parsecmgmt -a run -p vips -i native" > vips.trace
 	sleep 1
-elif [[ "$APPS" == "vips" ]]; then
-    sleep 1
-    time1=$(date +%s)
-    su hwnam -c "/home/hwnam/parsec-3.0/bin/parsecmgmt -a run -p vips -i simlarge" > vips.trace
-    time2=$(date +%s)
-    sleep $((11-time2+time1))
 elif [[ "$APPS" == "empty" ]];then
     echo -n "Starting app empty at time " > $OUTFILE
     date +%s.%N >> $OUTFILE
@@ -199,7 +193,7 @@ elif [[ "$APPS" == "empty" ]];then
     echo -n "Completed app empty at time " >> $OUTFILE
     date +%s.%N >> $OUTFILE
 else
-    wtime=$(($RANDOM%4))
+    wtime=$(($RANDOM%4+1))
     sleep $wtime
     time1=$(date +%s)
     su hwnam -c "/home/hwnam/parsec-3.0/bin/parsecmgmt -a run -p $APPS -i simlarge" > $APPS.trace

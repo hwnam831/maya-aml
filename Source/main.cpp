@@ -155,7 +155,7 @@ std::string getCtlFilePrefix(std::map<std::string, std::string> args) {
     return args["ctlfile"];
 }
     
-const uint32_t samplingIntervalMS = 20; //20 is default
+const uint32_t samplingIntervalMS = 5; //20 is default
 
 //Usage: ./maya --mode <Mode> [--idips <Sysid inputs>][--mask <mask name> --ctldir <dir> --ctlfile <file prefix>]
 
