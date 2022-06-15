@@ -62,16 +62,16 @@ class RNNGenerator2(nn.Module):
         self.maxpower = maxpower
         self.noise = noise
         self.encoder = nn.Sequential(
-            NoiseInjector(),
+            NoiseInjector(noise),
             nn.Conv1d(1,dim,window,1),
             nn.ReLU(),
-            NoiseInjector(),
+            NoiseInjector(noise),
         )
 
         self.resblock = nn.GRU(dim,dim, num_layers=1, batch_first=True)
 
         self.decoder = nn.Sequential(
-            NoiseInjector(),
+            NoiseInjector(noise),
             nn.Linear(dim, 1),
             nn.Hardtanh()
         )
@@ -99,8 +99,8 @@ def get_parser():
     parser.add_argument(
             "--gen",
             type=str,
-            choices=['gau', 'sin', 'adv', 'off', 'cnn', 'rnn', 'mlp'],
-            default='adv',
+            choices=['rnn', 'rnn2'],
+            default='rnn',
             help='Generator choices')
     parser.add_argument(
             "--window",
@@ -225,11 +225,14 @@ if __name__ == '__main__':
 
     clf = CNNCLF(dataset.window).cuda()
     clf_v = CNNCLF(dataset.window).cuda()
-    gen = RNNGenerator(args.dim, minpower=dataset.minpower, maxpower=dataset.maxpower).cuda()
+    if args.gen == 'rnn':
+        gen = RNNGenerator(args.dim, minpower=dataset.minpower, maxpower=dataset.maxpower).cuda()
+    elif args.gen == 'rnn2':
+        gen = RNNGenerator2(args.dim, minpower=dataset.minpower, maxpower=dataset.maxpower).cuda()
 
     if os.path.isfile('./best_{}.pth'.format(args.dim)) and not args.fresh:
         print('Previous best found: loading the model...')
-        gen.load_state_dict(torch.load('./best_{}.pth'.format(args.dim)))
+        gen.load_state_dict(torch.load('./best_{}_{}.pth'.format(args.gen, args.dim)))
 
     clf = Warmup(clf, clf_v, gen, args.warmup, args.lr, valloader, testloader)
 
@@ -345,4 +348,4 @@ if __name__ == '__main__':
         sched_c_v.step()
         sched_g.step()
     
-    torch.save(bestdict, "gen_{}_{:.3f}_{:.3f}.pth".format(args.dim,bestacc,bestnorm))
+    torch.save(bestdict, "{}_{}_{:.3f}_{:.3f}.pth".format(args.gen, args.dim,bestacc,bestnorm))
