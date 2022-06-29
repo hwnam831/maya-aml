@@ -9,7 +9,7 @@ import MayaDataset
 import argparse
 import time
 import os
-from Models import RNNGenerator, RNNGenerator2, Discriminator
+from Models import RNNGenerator, RNNGenerator2, Discriminator, Distiller
 
 
 
@@ -44,11 +44,6 @@ def get_parser():
             default='10',
             help='number of warmup epochs')
     parser.add_argument(
-            "--cooldown",
-            type=int,
-            default='100',
-            help='number of cooldown epochs')
-    parser.add_argument(
             "--batch_size",
             type=int,
             default='32',
@@ -66,7 +61,7 @@ def get_parser():
     parser.add_argument(
             "--student",
             type=int,
-            default=16,
+            default=32,
             help='Student dim')
     parser.add_argument(
             "--hinge",
@@ -100,20 +95,27 @@ def get_parser():
 
     return parser
 
-def Warmup(clf, clf_v, disc, gen, wepoch, lr, trainloader, valloader):
+def Warmup(clf, clf_v, disc, gen, student, distiller, wepoch, lr, trainloader, valloader):
     optim_c = torch.optim.Adam(clf.parameters(), lr=lr, weight_decay=1e-5)
     optim_c_v = torch.optim.Adam(clf_v.parameters(), lr=lr, weight_decay=1e-5)
     optim_d = torch.optim.Adam(disc.parameters(), lr=lr, weight_decay=1e-5)
+    optim_s = torch.optim.RMSprop(student.parameters(), weight_decay=1e-5)
+    optim_distill = torch.optim.RMSprop(distiller.parameters(), weight_decay=1e-5)
     criterion = nn.CrossEntropyLoss()
     for e in range(wepoch):
         clf.train()
         clf_v.train()
+        ldistill = 0.0
         for x,y in trainloader:
             optim_c.zero_grad()
             optim_d.zero_grad()
             optim_c_v.zero_grad()
+            optim_s.zero_grad()
+            optim_distill.zero_grad()
             xdata, ydata = x.cuda(), y.cuda()
-            perturb = gen(xdata)
+            t_out = gen(xdata, distill=True)
+            s_out = student(xdata, distill=True)
+            perturb = s_out[-1]
             p_input = torch.relu(xdata + perturb.detach())
             output = clf(p_input)
             disc_outputs = disc(p_input)
@@ -122,6 +124,12 @@ def Warmup(clf, clf_v, disc, gen, wepoch, lr, trainloader, valloader):
                 dl[yi] = dl[yi] - 1 # (0.9, -0.1, -0.1, ...)
             loss = criterion(output, ydata)
             loss.backward()
+            
+            loss_distill = distiller(s_out, t_out)
+            ldistill += loss_distill.item()
+            loss_distill.backward()
+            optim_s.step()
+            optim_distill.step()
             loss_d = torch.mean(disc_outputs*disc_labels)
             loss_d.backward()
             optim_d.step()
@@ -139,7 +147,7 @@ def Warmup(clf, clf_v, disc, gen, wepoch, lr, trainloader, valloader):
         totdistance = 0.0
         for x,y in valloader:
             xdata, ydata = x.cuda(), y.cuda()
-            p_input = torch.relu(xdata + gen(xdata).detach())
+            p_input = torch.relu(xdata + student(xdata).detach())
             output = clf(p_input)
             disc_outputs = disc(p_input)
             disc_labels = torch.ones_like(disc_outputs)*0.1
@@ -151,7 +159,8 @@ def Warmup(clf, clf_v, disc, gen, wepoch, lr, trainloader, valloader):
             totcount += y.size(0)
         macc = float(totcorrect)/totcount
         mdist = totdistance/len(valloader)
-        print("Warmup {}\t acc {:.4f}\t disc {:.4f}".format(e+1, macc, mdist))
+        mdistill = ldistill/len(trainloader)
+        print("Warmup {}\t acc {:.4f}\t disc {:.4f}\tdistill {:4f}".format(e+1, macc, mdist,mdistill))
     return clf
 
 if __name__ == '__main__':
@@ -173,23 +182,25 @@ if __name__ == '__main__':
     disc = Discriminator(512, 10, dataset.window).cuda()
     if args.gen == 'rnn':
         gen = RNNGenerator(args.dim, minpower=dataset.minpower, maxpower=dataset.maxpower).cuda()
+        student = RNNGenerator(args.student, minpower=dataset.minpower, maxpower=dataset.maxpower).cuda()
     elif args.gen == 'rnn2':
         gen = RNNGenerator2(args.dim, minpower=dataset.minpower, maxpower=dataset.maxpower).cuda()
-
+        student = RNNGenerator2(args.student, minpower=dataset.minpower, maxpower=dataset.maxpower).cuda()
+    distiller = Distiller(args.dim, args.student).cuda()
     if os.path.isfile('./best_{}_{}.pth'.format(args.gen, args.dim)) and not args.fresh:
         print('Previous best found: loading the model...')
         gen.load_state_dict(torch.load('./best_{}_{}.pth'.format(args.gen, args.dim)))
-
-    clf = Warmup(clf, clf_v, disc, gen, args.warmup, args.lr, valloader, testloader)
+    clf = Warmup(clf, clf_v, disc, gen, student, distiller, args.warmup, args.lr, valloader, testloader)
 
     optim_c = torch.optim.Adam(clf.parameters(), lr=2*args.lr, weight_decay=args.lr)
     optim_c_v = torch.optim.Adam(clf_v.parameters(), lr=2*args.lr, weight_decay=args.lr)
     optim_d = torch.optim.Adam(disc.parameters(), lr=2*args.lr, weight_decay=args.lr)
-    optim_g = torch.optim.Adam(gen.parameters(), lr=args.lr, weight_decay=args.lr)
+    optim_s = torch.optim.Adam(student.parameters(), lr=args.lr, weight_decay=args.lr)
+    optim_distill = torch.optim.Adam(distiller.parameters(), lr=args.lr, weight_decay=args.lr)
     sched_c   = torch.optim.lr_scheduler.StepLR(optim_c, 1, gamma=args.gamma)
     sched_c_v   = torch.optim.lr_scheduler.StepLR(optim_c_v, 1, gamma=args.gamma)
     sched_d = torch.optim.lr_scheduler.StepLR(optim_d, 1, gamma=args.gamma)
-    sched_g   = torch.optim.lr_scheduler.StepLR(optim_g, 1, gamma=args.gamma)
+    sched_s   = torch.optim.lr_scheduler.StepLR(optim_s, 1, gamma=args.gamma)
     criterion = nn.CrossEntropyLoss()
     kldiv = nn.KLDivLoss(reduce=True,reduction='batchmean')
     bestdict = gen.state_dict()
@@ -206,7 +217,8 @@ if __name__ == '__main__':
             #train classifier
             optim_c.zero_grad()
             optim_d.zero_grad()
-            perturb = gen(xdata)
+            s_out = student(xdata, distill=True)
+            perturb = s_out[-1]
             p_input = torch.relu(xdata + perturb.detach())
 
             #interleaving?
@@ -224,10 +236,12 @@ if __name__ == '__main__':
             disc.clip()
 
             #train generator
-            optim_g.zero_grad()
+            optim_s.zero_grad()
+            optim_distill.zero_grad()
             p_input = torch.relu(xdata + perturb)
             output = clf(p_input)
-            
+            t_out = gen(xdata, distill=True)
+            loss_recon = distiller(s_out, t_out)
             #hinge = perturb.mean(dim=-1) - args.amp
             #hinge[hinge<0] = 0.0
             norm = torch.linalg.norm(perturb, dim=-1)/np.sqrt(p_input.size(-1))
@@ -242,11 +256,12 @@ if __name__ == '__main__':
             loss_d2 = torch.mean(-disc_outputs*disc_labels)
             #fake_target = torch.zeros_like(ydata)
             #loss_adv1 = criterion(output, fake_target)
-            loss = loss_adv1 + args.lambda_h*loss_p + args.lambda_d*loss_d2
+            loss = loss_adv1 + args.lambda_h*loss_p + args.lambda_d*loss_d2 + args.lambda_r*loss_recon
 
 
             loss.backward()
-            optim_g.step()
+            optim_s.step()
+            optim_distill.step()
         #gen.eval()
         for x,y in valloader:
             xdata, ydata = x.cuda(), y.cuda()
@@ -256,7 +271,7 @@ if __name__ == '__main__':
             optim_c.zero_grad()
             optim_d.zero_grad()
             optim_c_v.zero_grad()
-            perturb = gen(xdata)
+            perturb = student(xdata)
             p_input = torch.relu(xdata + perturb.detach())
 
             #interleaving?
@@ -291,7 +306,7 @@ if __name__ == '__main__':
             gen.eval()
             for x,y in testloader:
                 xdata, ydata = x.cuda(), y.cuda()
-                perturb = gen(xdata)
+                perturb = student(xdata)
                 norm = torch.linalg.norm((perturb), dim=-1)/np.sqrt(xdata.size(-1))
                 p_input = torch.relu(xdata+perturb.detach())
                 output = clf_v(p_input)
@@ -322,6 +337,6 @@ if __name__ == '__main__':
         sched_c.step()
         sched_c_v.step()
         sched_d.step()
-        sched_g.step()
+        sched_s.step()
     
-    torch.save(bestdict, "{}_{}_{:.3f}_{:.3f}.pth".format(args.gen, args.dim,bestacc,bestnorm))
+    torch.save(bestdict, "{}_{}_{:.3f}_{:.3f}.pth".format(args.gen, args.student,bestacc,bestnorm))
