@@ -31,12 +31,12 @@ def get_parser():
     parser.add_argument(
             "--window",
             type=int,
-            default='2000',
+            default='500',
             help='number of samples window')
     parser.add_argument(
             "--epochs",
             type=int,
-            default='100',
+            default='200',
             help='number of epochs')
     parser.add_argument(
             "--warmup",
@@ -56,7 +56,7 @@ def get_parser():
     parser.add_argument(
             "--dim",
             type=int,
-            default='192',
+            default='64',
             help='internal channel dimension')
     parser.add_argument(
             "--lr",
@@ -71,7 +71,7 @@ def get_parser():
     parser.add_argument(
             "--hinge",
             type=float,
-            default='0.18',
+            default='0.2',
             help='noise amp scale')
     parser.add_argument(
             "--gamma",
@@ -158,7 +158,7 @@ if __name__ == '__main__':
     args = get_parser().parse_args()
     dataset = MayaDataset.MayaDataset('logs', minpower=25, maxpower=225, window=args.window)
     
-    dsets = random_split(dataset, [3000,1000, 1000])
+    dsets = random_split(dataset, [7000,1500, 1500])
     trainset = dsets[0]
     trainloader = DataLoader(trainset, batch_size=args.batch_size, num_workers=4)
     

@@ -17,6 +17,11 @@ nbdist/
 /Scripts/Launch_1.sh
 /Scripts/extractAppLogs.py
 logs/
+logs_5ms/
 maya_logs/
 Build/
 Dist/
+*.pth
+*.pt
+__pycache__/
+*.tar.gz
