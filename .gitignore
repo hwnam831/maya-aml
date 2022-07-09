@@ -25,3 +25,4 @@ Dist/
 *.pt
 __pycache__/
 *.tar.gz
+aml_logs/
