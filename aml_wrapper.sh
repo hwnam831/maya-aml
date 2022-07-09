@@ -1,0 +1,10 @@
+./aml_experiment.sh canneal; 
+./aml_experiment.sh freqmine; 
+./aml_experiment.sh vips; 
+./aml_experiment.sh streamcluster
+./aml_experiment.sh blackscholes;
+./aml_experiment.sh bodytrack;
+./aml_experiment.sh splash2x.radiosity;
+./aml_experiment.sh splash2x.volrend;
+./aml_experiment.sh splash2x.water_nsquared;
+./aml_experiment.sh splash2x.water_spatial

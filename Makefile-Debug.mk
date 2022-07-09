@@ -36,7 +36,7 @@ LDLIBSOPTIONS=
 
 ${DISTDIR}/${CONF}/${PROJECTNAME}: ${OBJECTFILES}
 	${MKDIR} -p ${DISTDIR}/${CONF}
-	${LINK.cc} -o ${DISTDIR}/${CONF}/${PROJECTNAME} ${OBJECTFILES} ${LDLIBSOPTIONS}
+	${LINK.cc} -rdynamic -o ${DISTDIR}/${CONF}/${PROJECTNAME} ${OBJECTFILES} ${LDLIBSOPTIONS} ${MYDEPS}
 
 ${OBJECTDIR}/Source/Abstractions.o: Source/Abstractions.cpp
 	${MKDIR} -p ${OBJECTDIR}/Source
@@ -66,7 +66,7 @@ ${OBJECTDIR}/Source/MathSupport.o: Source/MathSupport.cpp
 ${OBJECTDIR}/Source/Planner.o: Source/Planner.cpp
 	${MKDIR} -p ${OBJECTDIR}/Source
 	${RM} "$@.d"
-	$(COMPILE.cc) -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Source/Planner.o Source/Planner.cpp
+	$(COMPILE.cc) -g -IInclude -std=c++14 $(CXX_DEFINES) $(CXX_INCLUDES) -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Source/Planner.o Source/Planner.cpp
 
 ${OBJECTDIR}/Source/Sensors.o: Source/Sensors.cpp
 	${MKDIR} -p ${OBJECTDIR}/Source

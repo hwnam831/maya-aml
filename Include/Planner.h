@@ -22,10 +22,13 @@
 
 #include "Abstractions.h"
 #include "MathSupport.h"
+#include <torch/script.h>
 #include <random>
 #include <tuple>
 #include <utility>
 #include <string>
+#include <deque>
+
 
 extern const uint32_t samplingIntervalMS;
 
@@ -125,6 +128,18 @@ private:
     bool shouldMaskPropChange();
     //bool shouldMeanChange();
     //bool shouldVarianceChange();
+};
+
+class AMLPlanner : public Planner {
+public:
+    AMLPlanner(std::string name, std::string dirPath, std::string fileName, uint32_t smplInt=1,uint32_t window=32, uint32_t dim=64);
+protected:
+    Vector computeNewTargets(bool run) override;
+    torch::jit::script::Module generator;
+    at::Tensor hidden;
+    at::Tensor input_tensor;
+    size_t window;
+    size_t dim;
 };
 
 #endif /* PLANNER_H */

@@ -504,3 +504,55 @@ Vector MaskGenerator::computeNewTargets(bool run) {
 #endif
     return targets;
 }
+
+
+AMLPlanner::AMLPlanner(std::string name, std::string dirPath, std::string fileName, uint32_t smplInt,
+uint32_t window, uint32_t dim):
+Planner(name, dirPath, fileName, smplInt),
+window(window),
+dim(dim),
+hidden(torch::zeros({1,dim})),
+input_tensor(torch::zeros({1,window})){
+    std::string ptfilename = dirPath + "/cpuscript_rnn2_"+std::to_string(dim)+".pt";
+    try {
+        // Deserialize the ScriptModule from a file using torch::jit::load().
+        generator = torch::jit::load(ptfilename);
+    }
+    catch (const c10::Error& e) {
+        std::cerr << "error loading the model\n";
+
+    }
+
+    std::vector<torch::jit::IValue> inputs;
+    inputs.push_back(input_tensor);
+    inputs.push_back(hidden);
+    
+    at::IValue output = generator.forward(inputs);
+
+}
+
+Vector AMLPlanner::computeNewTargets(bool run){
+    auto numOutputs = targets.size();
+    outputs = currOutputVals->updateValuesFromPort();
+    double cpupower = outputs[1]; //CPUPower
+    float normalized = (cpupower-minLimits[0])/(maxLimits[0]-minLimits[0]);
+    if(run){
+        input_tensor = torch::roll(input_tensor, {-1}, {1});
+        auto input_a = input_tensor.accessor<float,2>();
+        input_a[0][window-1] = normalized;
+        std::vector<torch::jit::IValue> inputs;
+        inputs.push_back(input_tensor);
+        inputs.push_back(hidden);
+        
+        at::IValue output = generator.forward(inputs);
+        auto elements = output.toTuple()->elements();
+        hidden = elements[1].toTensor();
+        float perturb = elements[0].toTensor().item().toFloat();
+        float perturbed = perturb + normalized;
+        perturbed = perturbed * (perturbed>0);
+        targets[0] = (perturbed)*(maxLimits[0] - minLimits[0]) + minLimits[0];
+
+    }
+    return targets;
+}
+

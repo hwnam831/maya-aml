@@ -19,6 +19,13 @@ CONF=${DEFAULTCONF}
 # All Configurations
 ALLCONFS=Debug Release 
 
+# Libtorch related
+TORCHDIR=${HOME}/libtorch
+MYDEPS=-Wl,-rpath,${TORCHDIR}/lib ${TORCHDIR}/lib/libtorch.so ${TORCHDIR}/lib/libc10.so ${TORCHDIR}/lib/libkineto.a -Wl,--no-as-needed,"${TORCHDIR}/lib/libtorch_cpu.so" -Wl,--as-needed ${TORCHDIR}/lib/libc10.so -lpthread -Wl,--no-as-needed,"${TORCHDIR}/lib/libtorch.so" -Wl,--as-needed
+CXX_DEFINES = -DUSE_C10D_GLOO -DUSE_DISTRIBUTED -DUSE_RPC -DUSE_TENSORPIPE
+CXX_INCLUDES = -isystem ${TORCHDIR}/include -isystem ${TORCHDIR}/include/torch/csrc/api/include
+CXX_FLAGS = -D_GLIBCXX_USE_CXX11_ABI=1 -std=gnu++14
+
 # build
 build: .validate-impl .depcheck-impl
 	@#echo "=> Running $@... Configuration=$(CONF)"

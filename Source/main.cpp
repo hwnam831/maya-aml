@@ -127,8 +127,10 @@ MaskGenType getMaskType(std::map<std::string, std::string> args) {
         return MaskGenType::Sine;
     } else if (maskName.compare("Preset") == 0) {
         return MaskGenType::Preset;
+    } else if (maskName.compare("AML") == 0) {
+        return MaskGenType::Preset;
     } else {
-        std::cout << "Mask name " << maskName << " is invalid. It should be one of Constant, Uniform, Gauss, GaussSine, Sine, Preset" << std::endl;
+        std::cout << "Mask name " << maskName << " is invalid. It should be one of Constant, Uniform, Gauss, GaussSine, Sine, Preset, AML" << std::endl;
         std::exit(EXIT_FAILURE);
     }
 }
@@ -187,7 +189,8 @@ int main(int argc, char** argv) {
         std::string dirPath(getCtlDir(args));
         auto maskName = getMaskType(args);
         uint32_t ctlPeriod = 1; //invoke controller at every sampling interval
-        uint32_t maskGenPeriod = 3; //invoke mask gen for every 3 invocations of the controller so that controller can converge.
+        uint32_t maskGenPeriod = 1; //invoke mask gen for every 3 invocations of the controller so that controller can converge.
+        maskGenPeriod = maskName == MaskGenType::Preset ? 4 : 3;
         manager.addController("MayaController",{"CPUPower"},
         {
             "CPUFreq", "IdlePct", "PBalloon"
