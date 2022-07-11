@@ -110,9 +110,11 @@ class CNNCLF(nn.Module):
         return out
 
 if __name__ == '__main__':
-    dataset = MayaDataset('logs', minpower=25, maxpower=225, window=2000)
-    
-    dsets = random_split(dataset, [4000,1000])
+    dataset = MayaDataset('aml_logs', minpower=25, maxpower=225, window=450)
+    #dataset = MayaDataset('maya_logs', minpower=25, maxpower=225, window=1100)
+    trainlen = (dataset.__len__()*3)//4
+    vallen = dataset.__len__() - trainlen
+    dsets = random_split(dataset, [trainlen,vallen])
     trainset = dsets[0]
     trainloader = DataLoader(trainset, batch_size=50, num_workers=8)
     
@@ -134,6 +136,7 @@ if __name__ == '__main__':
     
     optim_c = torch.optim.Adam(clf.parameters(), lr=0.0001)
     criterion = nn.CrossEntropyLoss()
+    moving_avg = 0.0
     for e in range(100):
         clf.train()
         for x,y in trainloader:
@@ -153,7 +156,10 @@ if __name__ == '__main__':
             totcorrect += (pred==ydata).sum().item()
             totcount += y.size(0)
         macc = float(totcorrect)/totcount
-        print("Epoch {} \t acc {:.4f}".format(e+1, macc))
+        moving_avg = moving_avg*0.9 + macc*0.1
+        if e == 0:
+            moving_avg = macc
+        print("Epoch {} \t acc {:.4f}\tmoving avg: {:.4f}".format(e+1, macc, moving_avg))
 
         
     
