@@ -1,5 +1,5 @@
 mkdir -p aml_logs
-./aml_experiment.sh canneal $1 $2; 
+./aml_experiment.sh swaptions $1 $2; 
 ./aml_experiment.sh freqmine $1 $2; 
 ./aml_experiment.sh vips $1 $2; 
 ./aml_experiment.sh streamcluster $1 $2;

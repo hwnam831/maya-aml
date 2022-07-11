@@ -172,7 +172,7 @@ function stopall {
     #done
 
     #Turn turbo on
-    echo 1 > /sys/devices/system/cpu/cpufreq/boost
+    #echo 1 > /sys/devices/system/cpu/cpufreq/boost
 }
 
 ########ctrl C handler###############
@@ -182,7 +182,7 @@ stopall
 startall
 
 if [[ "$APPS" == "yourapp" ]]; then
-    su hwnam -c "/home/hwnam/parsec-3.0/bin/parsecmgmt -a run -p vips -i native" > vips.trace
+    su hwnam831 -c "/mydata/parsec-3.0/bin/parsecmgmt -a run -p vips -i native" > vips.trace
 	sleep 1
 elif [[ "$APPS" == "empty" ]];then
     echo -n "Starting app empty at time " > $OUTFILE
@@ -196,8 +196,8 @@ else
     wtime=$(($RANDOM%4+1))
     sleep $wtime
     time1=$(date +%s)
-    su hwnam -c "/home/hwnam/parsec-3.0/bin/parsecmgmt -a run -p $APPS -i simlarge" > $APPS.trace
+    su hwnam831 -c "/mydata/parsec-3.0/bin/parsecmgmt -a run -p $APPS -i simlarge" > ${LOGDIR}"/"${APPS}.trace
     time2=$(date +%s)
-    sleep $((12-wait-time2+time1))
+    sleep $((14-wait-time2+time1))
 fi
 stopall

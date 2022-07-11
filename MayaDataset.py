@@ -9,7 +9,7 @@ import random
 labels = {
     'blackscholes':0,
     'bodytrack':1,
-    'canneal':2,
+    'swaptions':2,
     'freqmine':3,
     'vips':4,
     'streamcluster':5,

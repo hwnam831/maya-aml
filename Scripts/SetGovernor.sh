@@ -37,4 +37,4 @@ for ((core = 0; core < numCores; core++)); do
 done
 
 #Disable turbo
-echo 0 >/sys/devices/system/cpu/cpufreq/boost
+#echo 0 >/sys/devices/system/cpu/cpufreq/boost

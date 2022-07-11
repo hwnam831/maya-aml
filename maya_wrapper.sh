@@ -1,5 +1,5 @@
 mkdir -p maya_logs
-./maya_experiment.sh canneal $1 $2; 
+./maya_experiment.sh swaptions $1 $2; 
 ./maya_experiment.sh freqmine $1 $2; 
 ./maya_experiment.sh vips $1 $2; 
 ./maya_experiment.sh streamcluster $1 $2;
