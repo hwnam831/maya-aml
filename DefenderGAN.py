@@ -51,7 +51,7 @@ def get_parser():
     parser.add_argument(
             "--batch_size",
             type=int,
-            default='32',
+            default='64',
             help='batch size')
     parser.add_argument(
             "--dim",
@@ -71,7 +71,7 @@ def get_parser():
     parser.add_argument(
             "--hinge",
             type=float,
-            default='0.2',
+            default='0.4',
             help='noise amp scale')
     parser.add_argument(
             "--gamma",
@@ -156,7 +156,7 @@ def Warmup(clf, clf_v, disc, gen, wepoch, lr, trainloader, valloader):
 
 if __name__ == '__main__':
     args = get_parser().parse_args()
-    dataset = MayaDataset.MayaDataset('logs', minpower=25, maxpower=225, window=args.window)
+    dataset = MayaDataset.MayaDataset('logs', minpower=25, maxpower=125, window=args.window)
     
     dsets = random_split(dataset, [7000,1500, 1500])
     trainset = dsets[0]

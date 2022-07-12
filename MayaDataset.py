@@ -110,16 +110,16 @@ class CNNCLF(nn.Module):
         return out
 
 if __name__ == '__main__':
-    dataset = MayaDataset('aml_logs', minpower=25, maxpower=225, window=450)
+    dataset = MayaDataset('logs', minpower=25, maxpower=225, window=450)
     #dataset = MayaDataset('maya_logs', minpower=25, maxpower=225, window=1100)
     trainlen = (dataset.__len__()*3)//4
     vallen = dataset.__len__() - trainlen
     dsets = random_split(dataset, [trainlen,vallen])
     trainset = dsets[0]
-    trainloader = DataLoader(trainset, batch_size=50, num_workers=8)
+    trainloader = DataLoader(trainset, batch_size=200, num_workers=8)
     
     valset = dsets[1]
-    valloader = DataLoader(valset, batch_size=50, num_workers=8)
+    valloader = DataLoader(valset, batch_size=200, num_workers=8)
     
     clf = nn.Sequential(
         nn.Linear(dataset.window,1024),
