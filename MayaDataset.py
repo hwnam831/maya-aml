@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 import re
 import torch
@@ -6,21 +7,8 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, random_split
 import random
 
-labels = {
-    'blackscholes':0,
-    'bodytrack':1,
-    'canneal':2,
-    'freqmine':3,
-    'vips':4,
-    'streamcluster':5,
-    'splash2x.radiosity':6,
-    'splash2x.volrend':7,
-    'splash2x.water_nsquared':8,
-    'splash2x.water_spatial':9
-}
-
 class MayaDataset(Dataset):
-    def __init__(self, logdir, minpower, maxpower, window=1000):
+    def __init__(self, logdir, minpower, maxpower, window=1000, labels='video'):
         self.window=window
         self.minpower = minpower
         self.maxpower = maxpower
@@ -28,6 +16,35 @@ class MayaDataset(Dataset):
         self.matcher = re.compile(r"(.+)_(\d+)_log\.txt")
         self.dir = logdir
         self.filelist=[]
+        assert labels in ['parsec','video']
+        self.labels = {
+                'parkrun':0,
+                'riverbed':1,
+                'sunflower':2,
+                'tractor':3,
+                'wind':4
+            }
+        if labels=='parsec':
+            self.labels ={
+                'blackscholes':0,
+                'bodytrack':1,
+                'canneal':2,
+                'freqmine':3,
+                'vips':4,
+                'streamcluster':5,
+                'splash2x.radiosity':6,
+                'splash2x.volrend':7,
+                'splash2x.water_nsquared':8,
+                'splash2x.water_spatial':9
+            }
+        elif labels=='video':
+            self.labels = {
+                'parkrun':0,
+                'riverbed':1,
+                'sunflower':2,
+                'tractor':3,
+                'wind':4
+            }
         for fname in raw_filelist:
             if self.matcher.match(fname):
                 self.filelist.append(fname)
@@ -38,7 +55,7 @@ class MayaDataset(Dataset):
     def __getitem__(self, idx):
         filename = self.filelist[idx]
         m = self.matcher.match(filename)
-        label = labels[m.group(1)]
+        label = self.labels[m.group(1)]
         trace = []
         with open(self.dir + '/'+filename,'r') as f:
             cnt = 0
@@ -110,16 +127,19 @@ class CNNCLF(nn.Module):
         return out
 
 if __name__ == '__main__':
-    dataset = MayaDataset('aml_logs', minpower=25, maxpower=225, window=450)
-    #dataset = MayaDataset('maya_logs', minpower=25, maxpower=225, window=1100)
+    logdir = sys.argv[1]
+    print(logdir)
+    #dataset = MayaDataset(logdir, minpower=25, maxpower=225, window=430)
+    dataset = MayaDataset(logdir, minpower=25, maxpower=225, window=1100, labels='video')
     trainlen = (dataset.__len__()*3)//4
     vallen = dataset.__len__() - trainlen
+    print("Splitting into train:{}, val:{}".format(trainlen,vallen))
     dsets = random_split(dataset, [trainlen,vallen])
     trainset = dsets[0]
-    trainloader = DataLoader(trainset, batch_size=50, num_workers=8)
+    trainloader = DataLoader(trainset, batch_size=100, num_workers=8, shuffle=True)
     
     valset = dsets[1]
-    valloader = DataLoader(valset, batch_size=50, num_workers=8)
+    valloader = DataLoader(valset, batch_size=100, num_workers=8)
     
     clf = nn.Sequential(
         nn.Linear(dataset.window,1024),
@@ -132,7 +152,7 @@ if __name__ == '__main__':
     ).cuda()
     
     
-    clf = CNNCLF(dataset.window).cuda()
+    #clf = CNNCLF(dataset.window).cuda()
     
     optim_c = torch.optim.Adam(clf.parameters(), lr=0.0001)
     criterion = nn.CrossEntropyLoss()

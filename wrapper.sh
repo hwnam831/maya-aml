@@ -1,10 +1,11 @@
-./experiment.sh canneal; 
-./experiment.sh freqmine; 
-./experiment.sh vips; 
-./experiment.sh streamcluster
-./experiment.sh blackscholes;
-./experiment.sh bodytrack;
-./experiment.sh splash2x.radiosity;
-./experiment.sh splash2x.volrend;
-./experiment.sh splash2x.water_nsquared;
-./experiment.sh splash2x.water_spatial
+mkdir -p logs
+./experiment.sh canneal $1 $2; 
+./experiment.sh freqmine $1 $2; 
+./experiment.sh vips $1 $2; 
+./experiment.sh streamcluster $1 $2;
+./experiment.sh blackscholes $1 $2;
+./experiment.sh bodytrack $1 $2;
+./experiment.sh splash2x.radiosity $1 $2;
+./experiment.sh splash2x.volrend $1 $2;
+./experiment.sh splash2x.water_nsquared $1 $2;
+./experiment.sh splash2x.water_spatial $1 $2;

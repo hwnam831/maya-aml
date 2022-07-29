@@ -79,6 +79,12 @@ def get_parser():
             default='0.98',
             help='decay scale for optimizer')
     parser.add_argument(
+            "--victim",
+            type=str,
+            choices=['parsec','video'],
+            default='parsec',
+            help='victim application domain')
+    parser.add_argument(
             "--lambda_h",
             type=float,
             default='5.0',
@@ -117,7 +123,7 @@ def Warmup(clf, clf_v, disc, gen, wepoch, lr, trainloader, valloader):
             p_input = torch.relu(xdata + perturb.detach())
             output = clf(p_input)
             disc_outputs = disc(p_input)
-            disc_labels = torch.ones_like(disc_outputs)*0.1
+            disc_labels = torch.ones_like(disc_outputs)/disc_outputs.shape[-1]
             for dl,yi in zip(disc_labels, ydata):
                 dl[yi] = dl[yi] - 1 # (0.9, -0.1, -0.1, ...)
             loss = criterion(output, ydata)
@@ -142,7 +148,7 @@ def Warmup(clf, clf_v, disc, gen, wepoch, lr, trainloader, valloader):
             p_input = torch.relu(xdata + gen(xdata).detach())
             output = clf(p_input)
             disc_outputs = disc(p_input)
-            disc_labels = torch.ones_like(disc_outputs)*0.1
+            disc_labels = torch.ones_like(disc_outputs)/disc_outputs.shape[-1]
             for dl,yi in zip(disc_labels, ydata):
                 dl[yi] = dl[yi] - 1 # (-0.9, 0.1, 0.1, ...)
             totdistance += -torch.mean(disc_outputs*disc_labels)
@@ -156,9 +162,13 @@ def Warmup(clf, clf_v, disc, gen, wepoch, lr, trainloader, valloader):
 
 if __name__ == '__main__':
     args = get_parser().parse_args()
-    dataset = MayaDataset.MayaDataset('logs', minpower=25, maxpower=225, window=args.window)
-    
-    dsets = random_split(dataset, [7000,1500, 1500])
+    victimdir = 'logs'
+    if args.victim == 'video':
+        victimdir = 'raw_video'
+
+    dataset = MayaDataset.MayaDataset(victimdir, minpower=30, maxpower=200, window=args.window, labels=args.victim)
+    setlengths = [6*len(dataset)//10, 2*len(dataset)//10, 2*len(dataset)//10]
+    dsets = random_split(dataset, setlengths)
     trainset = dsets[0]
     trainloader = DataLoader(trainset, batch_size=args.batch_size, num_workers=4)
     
@@ -170,13 +180,14 @@ if __name__ == '__main__':
 
     clf = CNNCLF(dataset.window).cuda()
     clf_v = CNNCLF(dataset.window).cuda()
-    disc = Discriminator(512, 10, dataset.window).cuda()
+    nlabel = 10 if args.victim == 'parsec' else 5
+    disc = Discriminator(512, nlabel, dataset.window).cuda()
     if args.gen == 'rnn':
         gen = RNNGenerator(args.dim, minpower=dataset.minpower, maxpower=dataset.maxpower).cuda()
     elif args.gen == 'rnn2':
         gen = RNNGenerator2(args.dim, minpower=dataset.minpower, maxpower=dataset.maxpower).cuda()
 
-    if os.path.isfile('./best_{}_{}.pth'.format(args.gen, args.dim)) and not args.fresh:
+    if os.path.isfile('./best_{}_{}_{}.pth'.format(args.victim,args.gen, args.dim)) and not args.fresh:
         print('Previous best found: loading the model...')
         gen.load_state_dict(torch.load('./best_{}_{}.pth'.format(args.gen, args.dim)))
 
@@ -212,7 +223,7 @@ if __name__ == '__main__':
             #interleaving?
             output = clf(p_input)
             disc_outputs = disc(p_input)
-            disc_labels = torch.ones_like(disc_outputs)*0.1
+            disc_labels = torch.ones_like(disc_outputs)/disc_outputs.shape[-1]
             for dl,yi in zip(disc_labels, ydata):
                 dl[yi] = dl[yi] - 1 # (0.9, -0.1, -0.1, ...)
             loss_c = criterion(output, ydata)
@@ -236,7 +247,7 @@ if __name__ == '__main__':
             fake_target = torch.ones_like(output)/output.shape[-1]
             loss_adv1 = kldiv(F.log_softmax(output,dim=-1), fake_target)
             disc_outputs = disc(p_input)
-            disc_labels = torch.ones_like(disc_outputs)*0.1
+            disc_labels = torch.ones_like(disc_outputs)/disc_outputs.shape[-1]
             for dl,yi in zip(disc_labels, ydata):
                 dl[yi] = dl[yi] - 1 # (-0.9, 0.1, 0.1, ...)
             loss_d2 = torch.mean(-disc_outputs*disc_labels)
@@ -263,7 +274,7 @@ if __name__ == '__main__':
             output = clf(p_input)
             output_v = clf_v(p_input)
             disc_outputs = disc(p_input)
-            disc_labels = torch.ones_like(disc_outputs)*0.1
+            disc_labels = torch.ones_like(disc_outputs)/disc_outputs.shape[-1]
             for dl,yi in zip(disc_labels, ydata):
                 dl[yi] = dl[yi] - 1 # (-0.9, 0.1, 0.1, ...)
             loss_d = torch.mean(disc_outputs*disc_labels)
@@ -305,7 +316,7 @@ if __name__ == '__main__':
                 totcorrect += (pred==ydata).sum().item()
                 totcount += y.size(0)
                 disc_outputs = disc(p_input)
-                disc_labels = torch.ones_like(disc_outputs)*0.1
+                disc_labels = torch.ones_like(disc_outputs)/disc_outputs.shape[-1]
                 for dl,yi in zip(disc_labels, ydata):
                     dl[yi] = dl[yi] - 1 # (0.9, -0.1, -0.1, ...)
                 totdist += torch.mean(disc_outputs*disc_labels).item()
@@ -324,4 +335,4 @@ if __name__ == '__main__':
         sched_d.step()
         sched_g.step()
     
-    torch.save(bestdict, "{}_{}_{:.3f}_{:.3f}.pth".format(args.gen, args.dim,bestacc,bestnorm))
+    torch.save(bestdict, "{}_{}_{}_{:.3f}_{:.3f}.pth".format(args.victim, args.gen, args.dim,bestacc,bestnorm))
