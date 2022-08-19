@@ -104,3 +104,8 @@ If you have questions about the code, create an issue in the repo, or contact [R
 ## License
 
 [UIUC/NCSA](https://choosealicense.com/licenses/ncsa/)
+
+## TODO
+- Set RAPL and see what happens (larger or smaller)
+- change to 60ms?
+- feedback training of aml
