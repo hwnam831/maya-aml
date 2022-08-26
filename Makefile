@@ -14,10 +14,11 @@ PROJECTNAME=Maya
 
 # Active Configuration
 DEFAULTCONF=Release
-CONF=${DEFAULTCONF}
+
 
 # All Configurations
 ALLCONFS=Debug Release 
+CONF=${DEFAULTCONF}
 
 # Libtorch related
 TORCHDIR=${HOME}/libtorch
