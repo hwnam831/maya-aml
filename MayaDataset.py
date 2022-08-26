@@ -130,7 +130,7 @@ if __name__ == '__main__':
     logdir = sys.argv[1]
     print(logdir)
     #dataset = MayaDataset(logdir, minpower=25, maxpower=225, window=430)
-    dataset = MayaDataset(logdir, minpower=25, maxpower=225, window=1100, labels='video')
+    dataset = MayaDataset(logdir, minpower=25, maxpower=225, window=900, labels='video')
     trainlen = (dataset.__len__()*3)//4
     vallen = dataset.__len__() - trainlen
     print("Splitting into train:{}, val:{}".format(trainlen,vallen))
@@ -152,7 +152,7 @@ if __name__ == '__main__':
     ).cuda()
     
     
-    #clf = CNNCLF(dataset.window).cuda()
+    clf = CNNCLF(dataset.window).cuda()
     
     optim_c = torch.optim.Adam(clf.parameters(), lr=0.0001)
     criterion = nn.CrossEntropyLoss()

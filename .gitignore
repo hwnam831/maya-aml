@@ -21,6 +21,7 @@ logs_5ms/
 maya_logs/
 Build/
 Dist/
+traces/
 *.pth
 *.pt
 __pycache__/
