@@ -87,7 +87,7 @@ def get_parser():
     parser.add_argument(
             "--lambda_h",
             type=float,
-            default='5.0',
+            default='10.0',
             help='lambda coef for hinge loss')
     parser.add_argument(
             "--lambda_d",
@@ -166,7 +166,7 @@ if __name__ == '__main__':
     if args.victim == 'video':
         victimdir = 'raw_video'
 
-    dataset = MayaDataset.MayaDataset(victimdir, minpower=30, maxpower=200, window=args.window, labels=args.victim)
+    dataset = MayaDataset.MayaDataset(victimdir, minpower=25, maxpower=225, window=args.window, labels=args.victim)
     setlengths = [6*len(dataset)//10, 2*len(dataset)//10, 2*len(dataset)//10]
     dsets = random_split(dataset, setlengths)
     trainset = dsets[0]

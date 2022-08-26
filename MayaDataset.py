@@ -152,7 +152,7 @@ if __name__ == '__main__':
     ).cuda()
     
     
-    #clf = CNNCLF(dataset.window).cuda()
+    clf = CNNCLF(dataset.window).cuda()
     
     optim_c = torch.optim.Adam(clf.parameters(), lr=0.0001)
     criterion = nn.CrossEntropyLoss()
