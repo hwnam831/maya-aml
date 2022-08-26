@@ -9,7 +9,7 @@ import MayaDataset
 import argparse
 import time
 import os
-from Models import RNNGenerator, RNNGenerator2, Discriminator
+from Models import RNNGenerator3, Discriminator
 
 
 
@@ -25,13 +25,13 @@ def get_parser():
     parser.add_argument(
             "--gen",
             type=str,
-            choices=['rnn', 'rnn2'],
-            default='rnn2',
+            choices=['rnn'],
+            default='rnn',
             help='Generator choices')
     parser.add_argument(
             "--window",
             type=int,
-            default='500',
+            default='498',
             help='number of samples window')
     parser.add_argument(
             "--epochs",
@@ -120,7 +120,7 @@ def Warmup(clf, clf_v, disc, gen, wepoch, lr, trainloader, valloader):
             optim_c_v.zero_grad()
             xdata, ydata = x.cuda(), y.cuda()
             perturb = gen(xdata)
-            p_input = torch.relu(xdata + perturb.detach())
+            p_input = perturb.detach()
             output = clf(p_input)
             disc_outputs = disc(p_input)
             disc_labels = torch.ones_like(disc_outputs)/disc_outputs.shape[-1]
@@ -145,7 +145,7 @@ def Warmup(clf, clf_v, disc, gen, wepoch, lr, trainloader, valloader):
         totdistance = 0.0
         for x,y in valloader:
             xdata, ydata = x.cuda(), y.cuda()
-            p_input = torch.relu(xdata + gen(xdata).detach())
+            p_input = gen(xdata).detach()
             output = clf(p_input)
             disc_outputs = disc(p_input)
             disc_labels = torch.ones_like(disc_outputs)/disc_outputs.shape[-1]
@@ -178,14 +178,13 @@ if __name__ == '__main__':
     testset = dsets[2]
     testloader = DataLoader(testset, batch_size=args.batch_size, num_workers=4)
 
-    clf = CNNCLF(dataset.window).cuda()
-    clf_v = CNNCLF(dataset.window).cuda()
+    clf = CNNCLF(dataset.window//3).cuda()
+    clf_v = CNNCLF(dataset.window//3).cuda()
     nlabel = 10 if args.victim == 'parsec' else 5
-    disc = Discriminator(512, nlabel, dataset.window).cuda()
+    disc = Discriminator(512, nlabel, dataset.window//3).cuda()
     if args.gen == 'rnn':
-        gen = RNNGenerator(args.dim, minpower=dataset.minpower, maxpower=dataset.maxpower).cuda()
-    elif args.gen == 'rnn2':
-        gen = RNNGenerator2(args.dim, minpower=dataset.minpower, maxpower=dataset.maxpower).cuda()
+        gen = RNNGenerator3(args.dim, minpower=dataset.minpower, maxpower=dataset.maxpower).cuda()
+
 
     if os.path.isfile('./best_{}_{}_{}.pth'.format(args.victim,args.gen, args.dim)) and not args.fresh:
         print('Previous best found: loading the model...')
@@ -218,7 +217,7 @@ if __name__ == '__main__':
             optim_c.zero_grad()
             optim_d.zero_grad()
             perturb = gen(xdata)
-            p_input = torch.relu(xdata + perturb.detach())
+            p_input = perturb.detach()
 
             #interleaving?
             output = clf(p_input)
@@ -236,12 +235,14 @@ if __name__ == '__main__':
 
             #train generator
             optim_g.zero_grad()
-            p_input = torch.relu(xdata + perturb)
+            p_input = perturb
             output = clf(p_input)
             
             #hinge = perturb.mean(dim=-1) - args.amp
             #hinge[hinge<0] = 0.0
-            norm = torch.linalg.norm(perturb, dim=-1)/np.sqrt(p_input.size(-1))
+            pdiff  = perturb - xdata.reshape(-1,3,xdata.size(1),xdata.size(2)).mean(dim=1)
+            norm = torch.linalg.norm(pdiff, dim=-1)/np.sqrt(pdiff.size(-1))
+
             loss_p = torch.mean(torch.relu(norm-args.hinge))
             #loss_p = torch.mean(norm)
             fake_target = torch.ones_like(output)/output.shape[-1]
@@ -268,7 +269,7 @@ if __name__ == '__main__':
             optim_d.zero_grad()
             optim_c_v.zero_grad()
             perturb = gen(xdata)
-            p_input = torch.relu(xdata + perturb.detach())
+            p_input = perturb.detach()
 
             #interleaving?
             output = clf(p_input)
@@ -303,8 +304,9 @@ if __name__ == '__main__':
             for x,y in testloader:
                 xdata, ydata = x.cuda(), y.cuda()
                 perturb = gen(xdata)
-                norm = torch.linalg.norm((perturb), dim=-1)/np.sqrt(xdata.size(-1))
-                p_input = torch.relu(xdata+perturb.detach())
+                pdiff  = perturb - xdata.reshape(-1,3,xdata.size(1),xdata.size(2)).mean(dim=1)
+                norm = torch.linalg.norm((pdiff), dim=-1)/np.sqrt(pdiff.size(-1))
+                p_input = perturb.detach()
                 output = clf_v(p_input)
                 
                 loss_c = criterion(output, ydata)

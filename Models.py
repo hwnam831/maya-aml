@@ -81,6 +81,41 @@ class RNNGenerator2(nn.Module):
         else: 
             return out
 
+#3:1 generator
+class RNNGenerator3(nn.Module):
+    def __init__(self, dim, window=32, minpower=25.0, maxpower=225.0, noise=0.1):
+        super().__init__()
+        self.window = window
+        self.minpower = minpower
+        self.maxpower = maxpower
+        self.noise = noise
+        self.encoder = nn.Sequential(
+            NoiseInjector(noise),
+            nn.Conv1d(1,dim,window,stride=3),
+            nn.ReLU(),
+            NoiseInjector(noise),
+        )
+
+        self.resblock = nn.GRU(dim,dim, num_layers=1, batch_first=True)
+
+        self.decoder = nn.Sequential(
+            NoiseInjector(noise),
+            nn.Linear(dim, 1),
+            nn.Hardsigmoid()
+        )
+    #S,N,C
+    def forward(self, x, distill=False):
+        #Padding so that each output only observes the history
+        padded = F.pad(x,(self.window,0))
+        encoded = self.encoder(padded.view(padded.shape[0],1,padded.shape[1])).permute(0,2,1)
+        res = encoded + self.resblock(encoded)[0]
+        out = self.decoder(res).view(x.shape[0],x.shape[1]+1)[:,:-1]
+        
+        if distill:
+            return (encoded, res, out)
+        else: 
+            return out
+
 class RNNInference(nn.Module):
     def __init__(self, dim, window=32, noise=0.05):
         super().__init__()
