@@ -109,7 +109,7 @@ class RNNGenerator3(nn.Module):
         padded = F.pad(x,(self.window,0))
         encoded = self.encoder(padded.view(padded.shape[0],1,padded.shape[1])).permute(0,2,1)
         res = encoded + self.resblock(encoded)[0]
-        out = self.decoder(res).view(x.shape[0],x.shape[1]+1)[:,:-1]
+        out = self.decoder(res).view(x.shape[0],-1)[:,:-1]
         
         if distill:
             return (encoded, res, out)

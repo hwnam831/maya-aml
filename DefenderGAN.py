@@ -25,8 +25,8 @@ def get_parser():
     parser.add_argument(
             "--gen",
             type=str,
-            choices=['rnn'],
-            default='rnn',
+            choices=['rnn','rnn3'],
+            default='rnn3',
             help='Generator choices')
     parser.add_argument(
             "--window",
@@ -81,7 +81,7 @@ def get_parser():
     parser.add_argument(
             "--victim",
             type=str,
-            choices=['parsec','video'],
+            choices=['parsec','video','video_aml','parsec_aml'],
             default='parsec',
             help='victim application domain')
     parser.add_argument(
@@ -163,10 +163,15 @@ def Warmup(clf, clf_v, disc, gen, wepoch, lr, trainloader, valloader):
 if __name__ == '__main__':
     args = get_parser().parse_args()
     victimdir = 'logs'
+    victimlabel = args.victim
     if args.victim == 'video':
-        victimdir = 'raw_video'
+        victimdir = 'traces/raw_video'
+        victimlabel = 'video'
+    if args.victim == 'video_aml':
+        victimdir = 'traces/aml_video'
+        victimlabel = 'video'
 
-    dataset = MayaDataset.MayaDataset(victimdir, minpower=25, maxpower=225, window=args.window, labels=args.victim)
+    dataset = MayaDataset.MayaDataset(victimdir, minpower=25, maxpower=225, window=args.window, labels=victimlabel)
     setlengths = [6*len(dataset)//10, 2*len(dataset)//10, 2*len(dataset)//10]
     dsets = random_split(dataset, setlengths)
     trainset = dsets[0]
@@ -182,7 +187,7 @@ if __name__ == '__main__':
     clf_v = CNNCLF(dataset.window//3).cuda()
     nlabel = 10 if args.victim == 'parsec' else 5
     disc = Discriminator(512, nlabel, dataset.window//3).cuda()
-    if args.gen == 'rnn':
+    if args.gen == 'rnn3':
         gen = RNNGenerator3(args.dim, minpower=dataset.minpower, maxpower=dataset.maxpower).cuda()
 
 
@@ -240,7 +245,7 @@ if __name__ == '__main__':
             
             #hinge = perturb.mean(dim=-1) - args.amp
             #hinge[hinge<0] = 0.0
-            pdiff  = perturb - xdata.reshape(-1,3,xdata.size(1),xdata.size(2)).mean(dim=1)
+            pdiff  = perturb - xdata.reshape(-1,3,perturb.size(1)).mean(dim=1)
             norm = torch.linalg.norm(pdiff, dim=-1)/np.sqrt(pdiff.size(-1))
 
             loss_p = torch.mean(torch.relu(norm-args.hinge))
@@ -304,7 +309,7 @@ if __name__ == '__main__':
             for x,y in testloader:
                 xdata, ydata = x.cuda(), y.cuda()
                 perturb = gen(xdata)
-                pdiff  = perturb - xdata.reshape(-1,3,xdata.size(1),xdata.size(2)).mean(dim=1)
+                pdiff  = perturb - xdata.reshape(-1,3,perturb.size(1)).mean(dim=1)
                 norm = torch.linalg.norm((pdiff), dim=-1)/np.sqrt(pdiff.size(-1))
                 p_input = perturb.detach()
                 output = clf_v(p_input)
@@ -327,7 +332,8 @@ if __name__ == '__main__':
             macc = float(totcorrect)/totcount
             #mnorm = mnorm*(dataset.maxpower-dataset.minpower)
             newpower = newpower*(dataset.maxpower-dataset.minpower)/len(testloader) + dataset.minpower
-            if np.abs(macc-0.1) <= np.abs(bestacc-0.1) and e > args.epochs//2:
+            perfectacc = 1/nlabel
+            if np.abs(macc-perfectacc) <= np.abs(bestacc-perfectacc) and e > args.epochs//2:
                 bestacc = macc
                 bestdict = gen.state_dict()
                 bestnorm = mnorm
