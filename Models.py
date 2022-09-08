@@ -159,6 +159,49 @@ class RNNInference(nn.Module):
         
         return out, h_out
 
+class RNNInference3(nn.Module):
+    def __init__(self, dim, window=32, noise=0.05):
+        super().__init__()
+        self.window = window
+        self.noise = noise
+        self.dim =dim
+        self.encoder = nn.Sequential(
+            NoiseInjector(self.noise),
+            nn.Linear(self.window,self.dim),
+            nn.ReLU(),
+            NoiseInjector(self.noise),
+        )
+        
+
+        self.rnn = nn.GRUCell(self.dim,self.dim)
+        
+
+        self.decoder = nn.Sequential(
+            NoiseInjector(self.noise),
+            nn.Linear(self.dim, 1),
+            nn.Hardsigmoid()
+        )
+        
+        
+    def copy_params(self,gen):
+        self.encoder[1].weight.data = gen.encoder[1].weight.data.reshape(self.dim, self.window)
+        self.encoder[1].bias.data = gen.encoder[1].bias.data
+        self.rnn.weight_ih.data = gen.resblock.weight_ih_l0.data
+        self.rnn.weight_hh.data = gen.resblock.weight_hh_l0.data
+        self.rnn.bias_ih.data = gen.resblock.bias_ih_l0.data
+        self.rnn.bias_hh.data = gen.resblock.bias_hh_l0.data
+        self.decoder[1].weight.data = gen.decoder[1].weight.data
+        self.decoder[1].bias.data = gen.decoder[1].bias.data
+
+
+    def forward(self, input, hidden):
+        encoded = self.encoder(input)
+        h_out = self.rnn(encoded, hidden)
+        out = encoded + h_out
+        out = self.decoder(out)
+        
+        return out, h_out
+
 class Discriminator(nn.Module):
     def __init__(self, dim, n_cls, window):
         super().__init__()
