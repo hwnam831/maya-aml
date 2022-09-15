@@ -189,7 +189,7 @@ int main(int argc, char** argv) {
         std::string dirPath(getCtlDir(args));
         auto maskName = getMaskType(args);
         uint32_t ctlPeriod = 1; //invoke controller at every sampling interval
-        uint32_t maskGenPeriod = 1; //invoke mask gen for every 3 invocations of the controller so that controller can converge.
+        uint32_t maskGenPeriod = 3; //invoke mask gen for every 3 invocations of the controller so that controller can converge.
         //maskGenPeriod = maskName == MaskGenType::Preset ? 1 : 3;
         manager.addController("MayaController",{"CPUPower"},
         {

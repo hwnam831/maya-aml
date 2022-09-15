@@ -28,3 +28,4 @@ __pycache__/
 *.tar.gz
 aml_logs/
 maya_5ms/
+sysid/

@@ -59,8 +59,8 @@ int main(int argc, char* argv[]) {
     omp_set_num_threads(maxthreads);
 
     n = 500;
-    int preps[] = {0, 1, 2, 4, 2, 1, 2, 1, 2, 2, 100};
-    int kreps[] = {0, 1, 1, 1, 4, 10, 9, 10, 4, 8, 100};
+    int preps[] = {0, 1, 2, 4, 2, 1, 2, 1, 4, 4, 200};
+    int kreps[] = {0, 1, 1, 1, 4, 10, 9, 10, 8, 16, 200};
     int sdur[] = {0, 25000, 12000, 10000, 8000, 4000, 250, 200, 10, 0, 100};
 
     A = (double***) malloc(sizeof (double**)*maxthreads);

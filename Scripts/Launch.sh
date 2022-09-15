@@ -204,7 +204,7 @@ elif [[ "$APPS" == "parkrun" ]];then
     time1=$(date +%s)
     su hwnam -c "ffmpeg -i /home/hwnam/vlc/$APPS.y4m  -hide_banner -vcodec libx264 /home/hwnam/vlc/$APPS.mp4" > $APPS.trace
     time2=$(date +%s)
-    stime=$((30-wtime-time2+time1))
+    stime=$((40-wtime-time2+time1))
     echo "sleeping for $stime"
     sleep $stime
     rm /home/hwnam/vlc/$APPS.mp4
@@ -214,7 +214,7 @@ elif [[ "$APPS" == "riverbed" ]];then
     time1=$(date +%s)
     su hwnam -c "ffmpeg -i /home/hwnam/vlc/$APPS.y4m  -hide_banner -vcodec libx264 /home/hwnam/vlc/$APPS.mp4" > $APPS.trace
     time2=$(date +%s)
-    stime=$((30-wtime-time2+time1))
+    stime=$((40-wtime-time2+time1))
     echo "sleeping for $stime"
     sleep $stime
     rm /home/hwnam/vlc/$APPS.mp4
@@ -224,7 +224,7 @@ elif [[ "$APPS" == "sunflower" ]];then
     time1=$(date +%s)
     su hwnam -c "ffmpeg -i /home/hwnam/vlc/$APPS.y4m  -hide_banner -vcodec libx264 /home/hwnam/vlc/$APPS.mp4" > $APPS.trace
     time2=$(date +%s)
-    stime=$((30-wtime-time2+time1))
+    stime=$((40-wtime-time2+time1))
     echo "sleeping for $stime"
     sleep $stime
     rm /home/hwnam/vlc/$APPS.mp4
@@ -234,7 +234,7 @@ elif [[ "$APPS" == "tractor" ]];then
     time1=$(date +%s)
     su hwnam -c "ffmpeg -i /home/hwnam/vlc/$APPS.y4m  -hide_banner -vcodec libx264 /home/hwnam/vlc/$APPS.mp4" > $APPS.trace
     time2=$(date +%s)
-    stime=$((30-wtime-time2+time1))
+    stime=$((40-wtime-time2+time1))
     echo "sleeping for $stime"
     sleep $stime
     rm /home/hwnam/vlc/$APPS.mp4
@@ -244,7 +244,7 @@ elif [[ "$APPS" == "wind" ]];then
     time1=$(date +%s)
     su hwnam -c "ffmpeg -i /home/hwnam/vlc/$APPS.y4m  -hide_banner -vcodec libx264 /home/hwnam/vlc/$APPS.mp4" > $APPS.trace
     time2=$(date +%s)
-    stime=$((30-wtime-time2+time1))
+    stime=$((40-wtime-time2+time1))
     echo "sleeping for $stime"
     sleep $stime
     rm /home/hwnam/vlc/$APPS.mp4
@@ -254,7 +254,7 @@ else
     time1=$(date +%s)
     su hwnam -c "/home/hwnam/parsec-3.0/bin/parsecmgmt -a run -p $APPS -i simlarge" > $APPS.trace
     time2=$(date +%s)
-    stime=$((15-wtime-time2+time1))
+    stime=$((20-wtime-time2+time1))
     echo "sleeping for $stime"
     sleep $stime
 fi

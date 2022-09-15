@@ -513,7 +513,7 @@ window(window),
 dim(dim),
 hidden(torch::zeros({1,dim})),
 input_tensor(torch::zeros({1,window})){
-    std::string ptfilename = dirPath + "/cpuscript_rnn2_"+std::to_string(dim)+".pt";
+    std::string ptfilename = dirPath + "/" + fileName + "_AML_"+std::to_string(dim)+".pt";
     try {
         // Deserialize the ScriptModule from a file using torch::jit::load().
         generator = torch::jit::load(ptfilename);
@@ -536,10 +536,11 @@ Vector AMLPlanner::computeNewTargets(bool run){
     outputs = currOutputVals->updateValuesFromPort();
     double cpupower = outputs[1]; //CPUPower
     float normalized = (cpupower-minLimits[0])/(maxLimits[0]-minLimits[0]);
+    input_tensor = torch::roll(input_tensor, {-1}, {1});
+    auto input_a = input_tensor.accessor<float,2>();
+    input_a[0][window-1] = normalized;
     if(run){
-        input_tensor = torch::roll(input_tensor, {-1}, {1});
-        auto input_a = input_tensor.accessor<float,2>();
-        input_a[0][window-1] = normalized;
+        
         std::vector<torch::jit::IValue> inputs;
         inputs.push_back(input_tensor);
         inputs.push_back(hidden);
@@ -548,8 +549,7 @@ Vector AMLPlanner::computeNewTargets(bool run){
         auto elements = output.toTuple()->elements();
         hidden = elements[1].toTensor();
         float perturb = elements[0].toTensor().item().toFloat();
-        float perturbed = perturb + normalized;
-        perturbed = perturbed * (perturbed>0);
+        float perturbed = perturb;
         targets[0] = (perturbed)*(maxLimits[0] - minLimits[0]) + minLimits[0];
 
     }
