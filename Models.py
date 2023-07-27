@@ -241,3 +241,47 @@ class Distiller(nn.Module):
         l_distill = self.criterion(enc_s2, enc_t.detach()) + self.criterion(res_s2, res_t.detach())
         l_recon = self.criterion(out_s, out_t.detach())
         return self.lamb_d*l_distill + self.lamb_r*l_recon
+
+
+class AttnShaper(nn.Module):
+    def __init__(self, dim=64, history=32, window=8, minpower=25.0, maxpower=225.0, amp=2.0, n_patterns=16):
+        super().__init__()
+        self.history=history
+        self.window=window
+        self.n_patterns=n_patterns
+        self.dim = dim
+        self.amp = amp
+        self.conv1 = nn.Sequential(
+            nn.Conv1d(1,dim,history, stride=window),
+            nn.ReLU(),
+        )
+
+        self.keys=nn.Linear(dim, self.n_patterns, bias=False)
+        offsets = torch.arange(n_patterns,dtype=torch.float32).view(n_patterns,1)*self.amp*3/n_patterns
+        self.register_buffer('offsets',offsets,persistent=True)
+        self.relu6 = nn.ReLU6()
+
+        #noiselevel = torch.arange(n_patterns,dtype=torch.float32).view(n_patterns,1)/n_patterns
+        #self.register_buffer('noiselevel',noiselevel, persistent=False)
+    def forward(self, x):
+        
+        padded = F.pad(x,(self.history-1, 0))
+        
+        out = self.conv1(padded[:,None,:]).permute(2,0,1) #N,C,S -> S,N,C
+        out = F.dropout(out,0.25)
+        attn_scores = F.relu6(self.keys(out))
+        probs = []
+        for score in attn_scores:
+            #prob = torch.softmax(score-avg_scores, dim=-1)
+            prob = torch.softmax(score,dim=-1)
+            probs.append(prob)
+        attn_probs = torch.stack(probs,dim=1).to(dtype=x.dtype) #N,S,C
+        #offset = torch.matmul(attn_probs, self.offsets).expand(x.shape[0],attn_probs.shape[1],self.window).reshape(x.shape[0],-1)[:,:x.shape[1]]
+        #noise = torch.randn_like(offset)
+        offset = torch.matmul(attn_probs, self.offsets).expand(x.shape[0],attn_probs.shape[1],self.window)
+        noise = torch.randn_like(offset) * offset/2
+        signal = (offset+noise).reshape(x.shape[0],-1)[:,:x.shape[1]]
+
+        signal = signal.view(x.shape[0],-1)[:,:x.shape[1]]
+
+        return signal-x

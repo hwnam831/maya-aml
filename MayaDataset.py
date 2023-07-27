@@ -8,8 +8,9 @@ from torch.utils.data import Dataset, DataLoader, random_split
 import random
 
 class MayaDataset(Dataset):
-    def __init__(self, logdir, minpower, maxpower, window=1000, labels='video'):
+    def __init__(self, logdir, minpower, maxpower, window=1000, labels='video', offset=50):
         self.window=window
+        self.offset=offset
         self.minpower = minpower
         self.maxpower = maxpower
         raw_filelist = os.listdir(logdir)
@@ -48,6 +49,13 @@ class MayaDataset(Dataset):
         for fname in raw_filelist:
             if self.matcher.match(fname):
                 self.filelist.append(fname)
+                with open(self.dir + '/'+fname,'r') as f:
+                    filelen = len(f.readlines())
+                    if filelen - self.offset - 1 < self.window:
+                        self.window = filelen - self.offset - 1
+        if self.window < window:
+            self.window = (self.window // 3)*3
+            print("Window {} too large. Set to {}".format(window, self.window))
         
     def __len__(self):
         return len(self.filelist)
@@ -69,9 +77,7 @@ class MayaDataset(Dataset):
                     continue
                 trace.append(val)
                 cnt += 1
-        offset = random.randint(0,len(trace)-self.window)
-        offset = min(offset, random.randint(0,50))
-        offset=0
+        offset = random.randint(self.offset,len(trace)-self.window)
         arr = np.array(trace[offset:offset+self.window],dtype=np.float32)
 
         return (arr-self.minpower)/(self.maxpower-self.minpower), label
@@ -130,7 +136,7 @@ if __name__ == '__main__':
     logdir = sys.argv[1]
     print(logdir)
     #dataset = MayaDataset(logdir, minpower=25, maxpower=225, window=430)
-    dataset = MayaDataset(logdir, minpower=25, maxpower=225, window=600, labels='video')
+    dataset = MayaDataset(logdir, minpower=25, maxpower=275, window=500, labels='parsec')
     trainlen = (dataset.__len__()*3)//4
     vallen = dataset.__len__() - trainlen
     print("Splitting into train:{}, val:{}".format(trainlen,vallen))
