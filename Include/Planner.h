@@ -142,4 +142,18 @@ protected:
     size_t dim;
 };
 
+class Shaper : public Planner {
+public:
+    Shaper(std::string name, std::string dirPath, std::string fileName, uint32_t smplInt=1,uint32_t history=32,uint32_t window=8, uint32_t dim=64);
+protected:
+    Vector computeNewTargets(bool run) override;
+    torch::jit::script::Module generator;
+    std::vector<float> next_targets;
+    at::Tensor input_tensor;
+    size_t window;
+    size_t history;
+    size_t dim;
+    size_t curcount;
+};
+
 #endif /* PLANNER_H */

@@ -9,7 +9,7 @@ import MayaDataset
 import argparse
 import time
 import os
-from Models import RNNGenerator3, Discriminator
+from Models import RNNGenerator3, Discriminator, AttnShaper
 
 
 
@@ -25,7 +25,7 @@ def get_parser():
     parser.add_argument(
             "--gen",
             type=str,
-            choices=['rnn','rnn3'],
+            choices=['rnn','rnn3','shaper'],
             default='rnn3',
             help='Generator choices')
     parser.add_argument(
@@ -51,7 +51,7 @@ def get_parser():
     parser.add_argument(
             "--batch_size",
             type=int,
-            default='32',
+            default='128',
             help='batch size')
     parser.add_argument(
             "--dim",
@@ -71,7 +71,7 @@ def get_parser():
     parser.add_argument(
             "--hinge",
             type=float,
-            default='0.2',
+            default='0.3',
             help='noise amp scale')
     parser.add_argument(
             "--gamma",
@@ -87,7 +87,7 @@ def get_parser():
     parser.add_argument(
             "--lambda_h",
             type=float,
-            default='10.0',
+            default='5.0',
             help='lambda coef for hinge loss')
     parser.add_argument(
             "--lambda_d",
@@ -103,6 +103,7 @@ def get_parser():
             "--fresh",
             action='store_true',
             help='Fresh start without loading')
+
 
     return parser
 
@@ -183,12 +184,14 @@ if __name__ == '__main__':
     testset = dsets[2]
     testloader = DataLoader(testset, batch_size=args.batch_size, num_workers=4)
 
-    clf = CNNCLF(dataset.window//3).cuda()
-    clf_v = CNNCLF(dataset.window//3).cuda()
+    clf = CNNCLF(dataset.window).cuda()
+    clf_v = CNNCLF(dataset.window).cuda()
     nlabel = 10 if args.victim == 'parsec' else 5
-    disc = Discriminator(512, nlabel, dataset.window//3).cuda()
+    disc = Discriminator(512, nlabel, dataset.window).cuda()
     if args.gen == 'rnn3':
         gen = RNNGenerator3(args.dim, minpower=dataset.minpower, maxpower=dataset.maxpower).cuda()
+    elif args.gen == 'shaper':
+        gen = AttnShaper(args.dim,minpower=dataset.minpower, maxpower=dataset.maxpower).cuda()
 
 
     if os.path.isfile('./best_{}_{}_{}.pth'.format(args.victim,args.gen, args.dim)) and not args.fresh:
@@ -245,7 +248,7 @@ if __name__ == '__main__':
             
             #hinge = perturb.mean(dim=-1) - args.amp
             #hinge[hinge<0] = 0.0
-            pdiff  = perturb - xdata.reshape(-1,3,perturb.size(1)).mean(dim=1)
+            pdiff  = perturb - xdata
             norm = torch.linalg.norm(pdiff, dim=-1)/np.sqrt(pdiff.size(-1))
 
             loss_p = torch.mean(torch.relu(norm-args.hinge))
@@ -309,7 +312,7 @@ if __name__ == '__main__':
             for x,y in testloader:
                 xdata, ydata = x.cuda(), y.cuda()
                 perturb = gen(xdata)
-                pdiff  = perturb - xdata.reshape(-1,3,perturb.size(1)).mean(dim=1)
+                pdiff  = perturb - xdata
                 norm = torch.linalg.norm((pdiff), dim=-1)/np.sqrt(pdiff.size(-1))
                 p_input = perturb.detach()
                 output = clf_v(p_input)

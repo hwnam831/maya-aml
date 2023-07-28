@@ -55,7 +55,9 @@ enum class MaskGenType {
     Gauss,
     Sine,
     GaussSine,
-    Preset // use a precomputed target from a file
+    Preset,
+    AML,
+    Shaper // use a precomputed target from a file
 };
 
 /*

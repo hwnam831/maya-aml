@@ -244,7 +244,7 @@ class Distiller(nn.Module):
 
 
 class AttnShaper(nn.Module):
-    def __init__(self, dim=64, history=32, window=8, minpower=25.0, maxpower=225.0, amp=2.0, n_patterns=16):
+    def __init__(self, dim=64, history=32, window=8, minpower=25.0, maxpower=225.0, amp=2.0, n_patterns=32):
         super().__init__()
         self.history=history
         self.window=window
@@ -257,7 +257,7 @@ class AttnShaper(nn.Module):
         )
 
         self.keys=nn.Linear(dim, self.n_patterns, bias=False)
-        offsets = torch.arange(n_patterns,dtype=torch.float32).view(n_patterns,1)*self.amp*3/n_patterns
+        offsets = (torch.arange(n_patterns,dtype=torch.float32).view(n_patterns,1))/n_patterns
         self.register_buffer('offsets',offsets,persistent=True)
         self.relu6 = nn.ReLU6()
 
@@ -285,3 +285,34 @@ class AttnShaper(nn.Module):
         signal = signal.view(x.shape[0],-1)[:,:x.shape[1]]
 
         return signal-x
+
+class ShaperInference(nn.Module):
+    def __init__(self, shaper):
+        super().__init__()
+        self.history=shaper.history
+        self.dim=shaper.dim
+        self.window=shaper.window
+        self.n_patterns=shaper.n_patterns
+
+        self.fc = nn.Linear(self.history, self.dim)
+        self.fc.weight.data = shaper.conv1[0].weight.data.view(self.dim,self.history)
+
+        self.keys=nn.Linear(self.dim, self.n_patterns, bias=False)
+        self.keys.weight.data = shaper.keys.weight.data
+
+        offsets = (torch.arange(self.n_patterns,dtype=torch.float32).view(self.n_patterns,1))/self.n_patterns
+        self.register_buffer('offsets',offsets,persistent=True)
+        self.relu6 = nn.ReLU6()
+
+    #1,H input, 1,W output
+    def forward(self, x):
+        
+        out = torch.relu(self.fc(x))
+        attn_score = F.relu6(self.keys(out))
+        attn_prob=torch.softmax(attn_score,dim=-1)
+        offset = torch.matmul(attn_prob, self.offsets).expand(1,self.window)
+        noise = torch.randn_like(offset) * offset/2
+        signal = (offset+noise)
+        
+
+        return signal.reshape(-1)

@@ -190,6 +190,8 @@ void Manager::addMaskGenerator(std::string name, std::string controllerName, Mas
         planner = std::make_unique<MaskGenerator>(name, dirPath, fileName, smplInt, SignalType::Uniform, randomProp);
     } else if (maskType == MaskGenType::Preset) {
         planner = std::make_unique<AMLPlanner>(name, dirPath, fileName, smplInt);
+    } else if (maskType == MaskGenType::Shaper) {
+        planner = std::make_unique<Shaper>(name, dirPath, fileName, smplInt);
     }
 
     //Find the corresponding controller

@@ -556,3 +556,61 @@ Vector AMLPlanner::computeNewTargets(bool run){
     return targets;
 }
 
+Shaper::Shaper(std::string name, std::string dirPath, std::string fileName, uint32_t smplInt,
+uint32_t history, uint32_t window, uint32_t dim):
+Planner(name, dirPath, fileName, smplInt),
+history(history),
+window(window),
+dim(dim),
+curcount(0),
+next_targets(std::vector<float>(window)),
+input_tensor(torch::zeros({1,history})){
+    std::string ptfilename = dirPath + "/" + fileName + "_Shaper_"+std::to_string(dim)+".pt";
+    try {
+        // Deserialize the ScriptModule from a file using torch::jit::load().
+        generator = torch::jit::load(ptfilename);
+    }
+    catch (const c10::Error& e) {
+        std::cerr << "error loading the model\n";
+
+    }
+
+    std::vector<torch::jit::IValue> inputs;
+    inputs.push_back(input_tensor);
+    
+    at::IValue output = generator.forward(inputs);
+
+}
+
+Vector Shaper::computeNewTargets(bool run){
+    auto numOutputs = targets.size();
+    outputs = currOutputVals->updateValuesFromPort();
+    double cpupower = outputs[1]; //CPUPower
+    float normalized = (cpupower-minLimits[0])/(maxLimits[0]-minLimits[0]);
+    input_tensor = torch::roll(input_tensor, {-1}, {1});
+    auto input_a = input_tensor.accessor<float,2>();
+    input_a[0][history-1] = normalized;
+    if (!run){
+        return targets;
+    }
+    else if (curcount < window){
+        targets[0] = next_targets[curcount]*(maxLimits[0] - minLimits[0]) + minLimits[0];
+        curcount++;
+    } else{
+        curcount = 0;
+
+        std::vector<torch::jit::IValue> inputs;
+        inputs.push_back(input_tensor);
+        
+        at::IValue output = generator.forward(inputs);
+
+        auto signal = output.toTensor().data_ptr<float>();
+        for (int i=0; i<next_targets.size(); i++){
+            next_targets[i] = signal[i];
+        }
+        targets[0] = next_targets[curcount]*(maxLimits[0] - minLimits[0]) + minLimits[0];
+        curcount++;
+
+    }
+    return targets;
+}
