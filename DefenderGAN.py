@@ -26,7 +26,7 @@ def get_parser():
             "--gen",
             type=str,
             choices=['rnn','rnn3','shaper'],
-            default='rnn3',
+            default='shaper',
             help='Generator choices')
     parser.add_argument(
             "--window",
@@ -71,7 +71,7 @@ def get_parser():
     parser.add_argument(
             "--hinge",
             type=float,
-            default='0.3',
+            default='0.25',
             help='noise amp scale')
     parser.add_argument(
             "--gamma",
@@ -103,6 +103,11 @@ def get_parser():
             "--fresh",
             action='store_true',
             help='Fresh start without loading')
+    parser.add_argument(
+            "--logdir",
+            type=str,
+            default=None,
+            help='org log dir')
 
 
     return parser
@@ -171,8 +176,9 @@ if __name__ == '__main__':
     if args.victim == 'video_aml':
         victimdir = 'traces/aml_video'
         victimlabel = 'video'
-
-    dataset = MayaDataset.MayaDataset(victimdir, minpower=25, maxpower=225, window=args.window, labels=victimlabel)
+    if args.logdir is not None:
+        victimdir = args.logdir
+    dataset = MayaDataset.MayaDataset(victimdir, minpower=25, maxpower=160, window=args.window, labels=victimlabel)
     setlengths = [6*len(dataset)//10, 2*len(dataset)//10, 2*len(dataset)//10]
     dsets = random_split(dataset, setlengths)
     trainset = dsets[0]

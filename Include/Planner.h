@@ -150,6 +150,7 @@ protected:
     torch::jit::script::Module generator;
     std::vector<float> next_targets;
     at::Tensor input_tensor;
+    at::Tensor hidden;
     size_t window;
     size_t history;
     size_t dim;

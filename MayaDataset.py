@@ -136,7 +136,7 @@ if __name__ == '__main__':
     logdir = sys.argv[1]
     print(logdir)
     #dataset = MayaDataset(logdir, minpower=25, maxpower=225, window=430)
-    dataset = MayaDataset(logdir, minpower=25, maxpower=275, window=500, labels='parsec')
+    dataset = MayaDataset(logdir, minpower=25, maxpower=225, window=500, labels='parsec')
     trainlen = (dataset.__len__()*3)//4
     vallen = dataset.__len__() - trainlen
     print("Splitting into train:{}, val:{}".format(trainlen,vallen))
@@ -174,18 +174,22 @@ if __name__ == '__main__':
             optim_c.step()
         totcorrect = 0
         totcount = 0
+        avgpow = 0.0
         clf.eval()
         for x,y in valloader:
             xdata, ydata = x.cuda(), y.cuda()
             output = clf(xdata)
+            avgpow += xdata.mean().item()
             pred = output.argmax(axis=-1)
             totcorrect += (pred==ydata).sum().item()
             totcount += y.size(0)
+        avgpow = avgpow/len(valloader)
         macc = float(totcorrect)/totcount
         moving_avg = moving_avg*0.9 + macc*0.1
         if e == 0:
             moving_avg = macc
-        print("Epoch {} \t acc {:.4f}\tmoving avg: {:.4f}".format(e+1, macc, moving_avg))
+        print("Epoch {} \t acc {:.4f}\tmoving avg: {:.4f}\tavgpow: {}".format(
+            e+1, macc, moving_avg, avgpow))
 
         
     

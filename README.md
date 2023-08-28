@@ -104,3 +104,10 @@ If you have questions about the code, create an issue in the repo, or contact [R
 ## License
 
 [UIUC/NCSA](https://choosealicense.com/licenses/ncsa/)
+
+## TODO
+- window of 3 -- in progress
+- recursive training
+- move to ssvfast?
+- video appl
+- cross-appl

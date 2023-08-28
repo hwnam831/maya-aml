@@ -562,6 +562,7 @@ Planner(name, dirPath, fileName, smplInt),
 history(history),
 window(window),
 dim(dim),
+hidden(torch::randn({1,dim})),
 curcount(0),
 next_targets(std::vector<float>(window)),
 input_tensor(torch::zeros({1,history})){
@@ -577,6 +578,7 @@ input_tensor(torch::zeros({1,history})){
 
     std::vector<torch::jit::IValue> inputs;
     inputs.push_back(input_tensor);
+    inputs.push_back(hidden);
     
     at::IValue output = generator.forward(inputs);
 
@@ -592,24 +594,19 @@ Vector Shaper::computeNewTargets(bool run){
     input_a[0][history-1] = normalized;
     if (!run){
         return targets;
-    }
-    else if (curcount < window){
-        targets[0] = next_targets[curcount]*(maxLimits[0] - minLimits[0]) + minLimits[0];
-        curcount++;
-    } else{
-        curcount = 0;
+    } else {
+
 
         std::vector<torch::jit::IValue> inputs;
         inputs.push_back(input_tensor);
+        inputs.push_back(hidden);
         
         at::IValue output = generator.forward(inputs);
+        auto elements = output.toTuple()->elements();
+        hidden = elements[1].toTensor();
+        float signal = elements[0].toTensor().item().toFloat();;
 
-        auto signal = output.toTensor().data_ptr<float>();
-        for (int i=0; i<next_targets.size(); i++){
-            next_targets[i] = signal[i];
-        }
-        targets[0] = next_targets[curcount]*(maxLimits[0] - minLimits[0]) + minLimits[0];
-        curcount++;
+        targets[0] = signal*(maxLimits[0] - minLimits[0]) + minLimits[0];
 
     }
     return targets;

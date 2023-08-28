@@ -3,6 +3,7 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, random_split
+from copy import deepcopy
 
 class RNNGenerator(nn.Module):
     def __init__(self, dim, window=32, minpower=25.0, maxpower=225.0, noise=0.05):
@@ -244,7 +245,7 @@ class Distiller(nn.Module):
 
 
 class AttnShaper(nn.Module):
-    def __init__(self, dim=64, history=32, window=8, minpower=25.0, maxpower=225.0, amp=2.0, n_patterns=32):
+    def __init__(self, dim=64, history=32, window=3, minpower=25.0, maxpower=160.0, amp=2.0, n_patterns=32):
         super().__init__()
         self.history=history
         self.window=window
@@ -255,11 +256,19 @@ class AttnShaper(nn.Module):
             nn.Conv1d(1,dim,history, stride=window),
             nn.ReLU(),
         )
-
-        self.keys=nn.Linear(dim, self.n_patterns, bias=False)
-        offsets = (torch.arange(n_patterns,dtype=torch.float32).view(n_patterns,1))/n_patterns
-        self.register_buffer('offsets',offsets,persistent=True)
-        self.relu6 = nn.ReLU6()
+        self.keys = nn.GRU(dim,self.dim, num_layers=1)
+        #self.keys = nn.Sequential(
+        #    nn.Linear(dim, self.dim),
+        #    nn.ReLU(),
+        #    nn.Linear(dim,dim))
+        self.offsets = nn.Linear(self.dim, 1)
+        self.stds = nn.Linear(self.dim, 1)
+        #self.keys=nn.Linear(dim, self.n_patterns*2, bias=False)
+        #offsets = (torch.arange(n_patterns,dtype=torch.float32).view(n_patterns,1))/n_patterns
+        #self.register_buffer('offsets',offsets,persistent=True)
+        #stds = (torch.arange(n_patterns,dtype=torch.float32).view(n_patterns,1))/n_patterns
+        #self.register_buffer('stds',stds,persistent=True)
+        #self.relu6 = nn.ReLU6()
 
         #noiselevel = torch.arange(n_patterns,dtype=torch.float32).view(n_patterns,1)/n_patterns
         #self.register_buffer('noiselevel',noiselevel, persistent=False)
@@ -268,21 +277,33 @@ class AttnShaper(nn.Module):
         padded = F.pad(x,(self.history-1, 0))
         
         out = self.conv1(padded[:,None,:]).permute(2,0,1) #N,C,S -> S,N,C
-        out = F.dropout(out,0.25)
-        attn_scores = F.relu6(self.keys(out))
+        #out = F.dropout(out,0.25)
+        attn_scores, _ = self.keys(out)
+        #attn_scores = self.keys(out)
+        attn_scores = F.relu6(attn_scores).permute(1,0,2)
+        #attn_scores = F.dropout(attn_scores, 0.25)
+        '''
         probs = []
         for score in attn_scores:
             #prob = torch.softmax(score-avg_scores, dim=-1)
             prob = torch.softmax(score,dim=-1)
             probs.append(prob)
         attn_probs = torch.stack(probs,dim=1).to(dtype=x.dtype) #N,S,C
+        '''
+        #attn_probs = torch.softmax(attn_scores,dim=-1).permute(1,0,2) #S,N,C->N,S,C
+        #offset_probs = attn_probs[:,:,:self.n_patterns]
+        #std_probs = attn_probs[:,:,self.n_patterns:]
         #offset = torch.matmul(attn_probs, self.offsets).expand(x.shape[0],attn_probs.shape[1],self.window).reshape(x.shape[0],-1)[:,:x.shape[1]]
         #noise = torch.randn_like(offset)
-        offset = torch.matmul(attn_probs, self.offsets).expand(x.shape[0],attn_probs.shape[1],self.window)
-        noise = torch.randn_like(offset) * offset/2
-        signal = (offset+noise).reshape(x.shape[0],-1)[:,:x.shape[1]]
+        #offset = torch.matmul(offset_probs, self.offsets)
+        offset = F.hardsigmoid(self.offsets(attn_scores))
+        #std = torch.matmul(std_probs, self.stds)
+        #std = torch.sigmoid(self.fc(attn_scores[:,:,self.n_patterns:])).permute(1,0,2)
+        std = F.hardsigmoid(self.stds(attn_scores))
+        noise = torch.randn_like(offset) * std
+        signal = (offset+noise).expand(x.shape[0],attn_scores.shape[1],self.window)
 
-        signal = signal.view(x.shape[0],-1)[:,:x.shape[1]]
+        signal = signal.reshape(x.shape[0],-1)[:,:x.shape[1]]
 
         return signal-x
 
@@ -297,22 +318,32 @@ class ShaperInference(nn.Module):
         self.fc = nn.Linear(self.history, self.dim)
         self.fc.weight.data = shaper.conv1[0].weight.data.view(self.dim,self.history)
 
-        self.keys=nn.Linear(self.dim, self.n_patterns, bias=False)
-        self.keys.weight.data = shaper.keys.weight.data
-
-        offsets = (torch.arange(self.n_patterns,dtype=torch.float32).view(self.n_patterns,1))/self.n_patterns
-        self.register_buffer('offsets',offsets,persistent=True)
         self.relu6 = nn.ReLU6()
+        self.keys = nn.GRUCell(self.dim,self.dim)
+        self.keys.weight_ih.data = shaper.keys.weight_ih_l0.data
+        self.keys.weight_hh.data = shaper.keys.weight_hh_l0.data
+        self.keys.bias_ih.data = shaper.keys.bias_ih_l0.data
+        self.keys.bias_hh.data = shaper.keys.bias_hh_l0.data
 
+        self.offsets = deepcopy(shaper.offsets)
+        self.stds = deepcopy(shaper.stds)
+        
+        
+    def copy_params(self,gen):
+        self.encoder[1].weight.data = gen.encoder[1].weight.data.reshape(self.dim, self.window)
+        self.encoder[1].bias.data = gen.encoder[1].bias.data
+        
+        self.decoder[1].weight.data = gen.decoder[1].weight.data
+        self.decoder[1].bias.data = gen.decoder[1].bias.data
     #1,H input, 1,W output
-    def forward(self, x):
+    def forward(self, x, hidden):
         
         out = torch.relu(self.fc(x))
-        attn_score = F.relu6(self.keys(out))
-        attn_prob=torch.softmax(attn_score,dim=-1)
-        offset = torch.matmul(attn_prob, self.offsets).expand(1,self.window)
-        noise = torch.randn_like(offset) * offset/2
-        signal = (offset+noise)
+        h_out = self.keys(out, hidden)
+        attn_score = self.relu6(h_out)
+        offset = F.hardsigmoid(self.offsets(attn_score))
+        std = F.hardsigmoid(self.stds(attn_score))
+        signal = (offset+torch.randn_like(offset) * std)
         
 
-        return signal.reshape(-1)
+        return signal, h_out
