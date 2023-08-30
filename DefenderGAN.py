@@ -41,7 +41,7 @@ def get_parser():
     parser.add_argument(
             "--warmup",
             type=int,
-            default='10',
+            default='30',
             help='number of warmup epochs')
     parser.add_argument(
             "--cooldown",

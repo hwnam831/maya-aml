@@ -300,12 +300,13 @@ class AttnShaper(nn.Module):
         #std = torch.matmul(std_probs, self.stds)
         #std = torch.sigmoid(self.fc(attn_scores[:,:,self.n_patterns:])).permute(1,0,2)
         std = F.hardsigmoid(self.stds(attn_scores))
-        noise = torch.randn_like(offset) * std
+        noise = torch.randn_like(offset) * offset/2
         signal = (offset+noise).expand(x.shape[0],attn_scores.shape[1],self.window)
-
+        signal = torch.clamp(signal, 0,1)
         signal = signal.reshape(x.shape[0],-1)[:,:x.shape[1]]
-
-        return signal-x
+        padded_signal = F.pad(signal,(self.window-1, 0))[:,None,:]
+        pooled_signal = F.avg_pool1d(padded_signal, self.window,stride=1)
+        return pooled_signal.reshape(x.shape[0],-1)-x
 
 class ShaperInference(nn.Module):
     def __init__(self, shaper):
@@ -342,8 +343,9 @@ class ShaperInference(nn.Module):
         h_out = self.keys(out, hidden)
         attn_score = self.relu6(h_out)
         offset = F.hardsigmoid(self.offsets(attn_score))
-        std = F.hardsigmoid(self.stds(attn_score))
-        signal = (offset+torch.randn_like(offset) * std)
+        #std = F.hardsigmoid(self.stds(attn_score))
+        noise = torch.randn_like(offset) * offset/2
+        signal = torch.clamp(offset+noise,0,1)
         
 
         return signal, h_out

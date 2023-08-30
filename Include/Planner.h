@@ -151,6 +151,7 @@ protected:
     std::vector<float> next_targets;
     at::Tensor input_tensor;
     at::Tensor hidden;
+    double curtarget;
     size_t window;
     size_t history;
     size_t dim;

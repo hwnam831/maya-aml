@@ -581,6 +581,11 @@ input_tensor(torch::zeros({1,history})){
     inputs.push_back(hidden);
     
     at::IValue output = generator.forward(inputs);
+    auto elements = output.toTuple()->elements();
+    hidden = elements[1].toTensor();
+    double signal = elements[0].toTensor().item().toFloat();
+    targets[0] = signal*(maxLimits[0] - minLimits[0]) + minLimits[0];
+    curtarget = signal*(maxLimits[0] - minLimits[0]) + minLimits[0];
 
 }
 
@@ -593,6 +598,7 @@ Vector Shaper::computeNewTargets(bool run){
     auto input_a = input_tensor.accessor<float,2>();
     input_a[0][history-1] = normalized;
     if (!run){
+        targets[0] = 2*targets[0]/3 + curtarget/3;
         return targets;
     } else {
 
@@ -604,9 +610,10 @@ Vector Shaper::computeNewTargets(bool run){
         at::IValue output = generator.forward(inputs);
         auto elements = output.toTuple()->elements();
         hidden = elements[1].toTensor();
-        float signal = elements[0].toTensor().item().toFloat();;
-
-        targets[0] = signal*(maxLimits[0] - minLimits[0]) + minLimits[0];
+        double signal = elements[0].toTensor().item().toFloat();;
+        
+        curtarget = signal*(maxLimits[0] - minLimits[0]) + minLimits[0];
+        targets[0] = 2*targets[0]/3 + curtarget/3;
 
     }
     return targets;
