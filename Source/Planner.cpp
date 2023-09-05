@@ -598,7 +598,7 @@ Vector Shaper::computeNewTargets(bool run){
     auto input_a = input_tensor.accessor<float,2>();
     input_a[0][history-1] = normalized;
     if (!run){
-        targets[0] = 2*targets[0]/3 + curtarget/3;
+        //targets[0] = 2*targets[0]/3 + curtarget/3;
         return targets;
     } else {
 
@@ -613,7 +613,8 @@ Vector Shaper::computeNewTargets(bool run){
         double signal = elements[0].toTensor().item().toFloat();;
         
         curtarget = signal*(maxLimits[0] - minLimits[0]) + minLimits[0];
-        targets[0] = 2*targets[0]/3 + curtarget/3;
+        //targets[0] = 2*targets[0]/3 + curtarget/3;
+        targets[0] = curtarget;
 
     }
     return targets;

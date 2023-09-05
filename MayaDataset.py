@@ -136,10 +136,11 @@ if __name__ == '__main__':
     logdir = sys.argv[1]
     print(logdir)
     #dataset = MayaDataset(logdir, minpower=25, maxpower=225, window=430)
-    dataset = MayaDataset(logdir, minpower=25, maxpower=225, window=500, labels='parsec')
+    dataset = MayaDataset(logdir, minpower=25, maxpower=160, window=500, labels='parsec')
     trainlen = (dataset.__len__()*3)//4
     vallen = dataset.__len__() - trainlen
     print("Splitting into train:{}, val:{}".format(trainlen,vallen))
+    setlengths = [5*len(dataset)//10, 3*len(dataset)//10, 2*len(dataset)//10]
     dsets = random_split(dataset, [trainlen,vallen])
     trainset = dsets[0]
     trainloader = DataLoader(trainset, batch_size=100, num_workers=8, shuffle=True)

@@ -92,7 +92,7 @@ def get_parser():
     parser.add_argument(
             "--lambda_d",
             type=float,
-            default='0.01',
+            default='1.0',
             help='lambda coef for discriminator loss')   
     parser.add_argument(
             "--lambda_r",
@@ -113,9 +113,9 @@ def get_parser():
     return parser
 
 def Warmup(clf, clf_v, disc, gen, wepoch, lr, trainloader, valloader):
-    optim_c = torch.optim.Adam(clf.parameters(), lr=lr, weight_decay=1e-5)
-    optim_c_v = torch.optim.Adam(clf_v.parameters(), lr=lr, weight_decay=1e-5)
-    optim_d = torch.optim.Adam(disc.parameters(), lr=lr, weight_decay=1e-5)
+    optim_c = torch.optim.Adam(clf.parameters(), lr=0.0001, weight_decay=1e-5)
+    optim_c_v = torch.optim.Adam(clf_v.parameters(), lr=0.0001, weight_decay=1e-5)
+    optim_d = torch.optim.Adam(disc.parameters(), lr=0.0001, weight_decay=1e-5)
     criterion = nn.CrossEntropyLoss()
     for e in range(wepoch):
         clf.train()
@@ -204,7 +204,7 @@ if __name__ == '__main__':
         print('Previous best found: loading the model...')
         gen.load_state_dict(torch.load('./best_{}_{}.pth'.format(args.gen, args.dim)))
 
-    clf = Warmup(clf, clf_v, disc, gen, args.warmup, args.lr, valloader, testloader)
+    clf = Warmup(clf, clf_v, disc, gen, args.warmup, args.lr, trainloader, valloader)
 
     optim_c = torch.optim.Adam(clf.parameters(), lr=2*args.lr, weight_decay=args.lr)
     optim_c_v = torch.optim.Adam(clf_v.parameters(), lr=2*args.lr, weight_decay=args.lr)
