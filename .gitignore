@@ -29,3 +29,5 @@ __pycache__/
 aml_logs/
 maya_5ms/
 sysid/
+shaper_logs/
+shaper_logs_old/

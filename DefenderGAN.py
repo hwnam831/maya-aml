@@ -26,12 +26,12 @@ def get_parser():
             "--gen",
             type=str,
             choices=['rnn','rnn3','shaper'],
-            default='rnn3',
+            default='shaper',
             help='Generator choices')
     parser.add_argument(
             "--window",
             type=int,
-            default='498',
+            default='500',
             help='number of samples window')
     parser.add_argument(
             "--epochs",
@@ -41,7 +41,7 @@ def get_parser():
     parser.add_argument(
             "--warmup",
             type=int,
-            default='10',
+            default='30',
             help='number of warmup epochs')
     parser.add_argument(
             "--cooldown",
@@ -71,7 +71,7 @@ def get_parser():
     parser.add_argument(
             "--hinge",
             type=float,
-            default='0.3',
+            default='0.35',
             help='noise amp scale')
     parser.add_argument(
             "--gamma",
@@ -92,7 +92,7 @@ def get_parser():
     parser.add_argument(
             "--lambda_d",
             type=float,
-            default='0.01',
+            default='0.1',
             help='lambda coef for discriminator loss')   
     parser.add_argument(
             "--lambda_r",
@@ -172,7 +172,7 @@ if __name__ == '__main__':
         victimdir = 'traces/aml_video'
         victimlabel = 'video'
 
-    dataset = MayaDataset.MayaDataset(victimdir, minpower=25, maxpower=225, window=args.window, labels=victimlabel)
+    dataset = MayaDataset.MayaDataset(victimdir, minpower=30, maxpower=160, window=args.window, labels=victimlabel)
     setlengths = [6*len(dataset)//10, 2*len(dataset)//10, 2*len(dataset)//10]
     dsets = random_split(dataset, setlengths)
     trainset = dsets[0]
@@ -198,7 +198,7 @@ if __name__ == '__main__':
         print('Previous best found: loading the model...')
         gen.load_state_dict(torch.load('./best_{}_{}.pth'.format(args.gen, args.dim)))
 
-    clf = Warmup(clf, clf_v, disc, gen, args.warmup, args.lr, valloader, testloader)
+    clf = Warmup(clf, clf_v, disc, gen, args.warmup, args.lr, trainloader, valloader)
 
     optim_c = torch.optim.Adam(clf.parameters(), lr=2*args.lr, weight_decay=args.lr)
     optim_c_v = torch.optim.Adam(clf_v.parameters(), lr=2*args.lr, weight_decay=args.lr)

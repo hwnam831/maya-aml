@@ -51,6 +51,8 @@ class MayaDataset(Dataset):
                 self.filelist.append(fname)
                 with open(self.dir + '/'+fname,'r') as f:
                     filelen = len(f.readlines())
+                    if filelen - self.offset - 1 < window:
+                        print("{} length {}".format(fname,filelen-self.offset-1) )
                     if filelen - self.offset - 1 < self.window:
                         self.window = filelen - self.offset - 1
         if self.window < window:
@@ -136,7 +138,7 @@ if __name__ == '__main__':
     logdir = sys.argv[1]
     print(logdir)
     #dataset = MayaDataset(logdir, minpower=25, maxpower=225, window=430)
-    dataset = MayaDataset(logdir, minpower=25, maxpower=275, window=500, labels='parsec')
+    dataset = MayaDataset(logdir, minpower=30, maxpower=160, window=500, labels='parsec')
     trainlen = (dataset.__len__()*3)//4
     vallen = dataset.__len__() - trainlen
     print("Splitting into train:{}, val:{}".format(trainlen,vallen))

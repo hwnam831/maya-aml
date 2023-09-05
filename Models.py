@@ -281,7 +281,7 @@ class AttnShaper(nn.Module):
         offset = torch.matmul(attn_probs, self.offsets).expand(x.shape[0],attn_probs.shape[1],self.window)
         noise = torch.randn_like(offset) * offset/2
         signal = (offset+noise).reshape(x.shape[0],-1)[:,:x.shape[1]]
-
+        signal = torch.clamp(signal,min=0,max=1)
         signal = signal.view(x.shape[0],-1)[:,:x.shape[1]]
 
         return signal-x
