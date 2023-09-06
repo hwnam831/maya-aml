@@ -249,13 +249,13 @@ elif [[ "$APPS" == "wind" ]];then
     #sleep $stime
     rm /home/hwnam/vlc/$APPS.mp4
 else
-    #wtime=$(($RANDOM%4+1))
-    #sleep $wtime
+    wtime=$(($RANDOM%3+1))
+    sleep $wtime
     time1=$(date +%s)
     su hwnam -c "/home/hwnam/parsec-3.0/bin/parsecmgmt -a run -p $APPS -i simlarge" > $APPS.trace
     time2=$(date +%s)
-    #stime=$((20-wtime-time2+time1))
+    stime=$((20-wtime-time2+time1))
     echo $((time2-time1))"s elapsed"
-    #sleep $stime
+    sleep $stime
 fi
 stopall

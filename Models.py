@@ -256,11 +256,11 @@ class AttnShaper(nn.Module):
             nn.ReLU(),
         )
 
-        self.keys=nn.Linear(dim, self.n_patterns, bias=False)
+        self.keys=nn.Linear(dim, self.n_patterns)
         offsets = (torch.arange(n_patterns,dtype=torch.float32).view(n_patterns,1))/n_patterns
         self.register_buffer('offsets',offsets,persistent=True)
         self.relu6 = nn.ReLU6()
-
+        #self.offsetlayer = nn.Linear(dim,window)
         #noiselevel = torch.arange(n_patterns,dtype=torch.float32).view(n_patterns,1)/n_patterns
         #self.register_buffer('noiselevel',noiselevel, persistent=False)
     def forward(self, x):
@@ -276,10 +276,11 @@ class AttnShaper(nn.Module):
             prob = torch.softmax(score,dim=-1)
             probs.append(prob)
         attn_probs = torch.stack(probs,dim=1).to(dtype=x.dtype) #N,S,C
-        #offset = torch.matmul(attn_probs, self.offsets).expand(x.shape[0],attn_probs.shape[1],self.window).reshape(x.shape[0],-1)[:,:x.shape[1]]
-        #noise = torch.randn_like(offset)
+        
         offset = torch.matmul(attn_probs, self.offsets).expand(x.shape[0],attn_probs.shape[1],self.window)
+        #offset = F.hardsigmoid(self.offsetlayer(out.permute(1,0,2)))
         noise = torch.randn_like(offset) * offset/2
+        
         signal = (offset+noise).reshape(x.shape[0],-1)[:,:x.shape[1]]
         signal = torch.clamp(signal,min=0,max=1)
         signal = signal.view(x.shape[0],-1)[:,:x.shape[1]]
@@ -313,6 +314,6 @@ class ShaperInference(nn.Module):
         offset = torch.matmul(attn_prob, self.offsets).expand(1,self.window)
         noise = torch.randn_like(offset) * offset/2
         signal = (offset+noise)
-        
+        signal = torch.clamp(signal,min=0,max=1)
 
         return signal.reshape(-1)

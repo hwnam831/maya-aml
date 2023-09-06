@@ -85,6 +85,11 @@ def get_parser():
             default='parsec',
             help='victim application domain')
     parser.add_argument(
+            "--victimdir",
+            type=str,
+            default=None,
+            help='victim application domain')
+    parser.add_argument(
             "--lambda_h",
             type=float,
             default='5.0',
@@ -92,7 +97,7 @@ def get_parser():
     parser.add_argument(
             "--lambda_d",
             type=float,
-            default='0.1',
+            default='0.5',
             help='lambda coef for discriminator loss')   
     parser.add_argument(
             "--lambda_r",
@@ -171,7 +176,8 @@ if __name__ == '__main__':
     if args.victim == 'video_aml':
         victimdir = 'traces/aml_video'
         victimlabel = 'video'
-
+    if args.victimdir is not None:
+        victimdir = args.victimdir
     dataset = MayaDataset.MayaDataset(victimdir, minpower=30, maxpower=160, window=args.window, labels=victimlabel)
     setlengths = [6*len(dataset)//10, 2*len(dataset)//10, 2*len(dataset)//10]
     dsets = random_split(dataset, setlengths)
