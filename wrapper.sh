@@ -1,4 +1,5 @@
 mkdir -p logs
+bash setondemand.sh
 ./experiment.sh canneal $1 $2; 
 ./experiment.sh freqmine $1 $2; 
 ./experiment.sh vips $1 $2; 

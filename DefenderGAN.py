@@ -9,7 +9,7 @@ import MayaDataset
 import argparse
 import time
 import os
-from Models import RNNGenerator3, Discriminator, AttnShaper
+from Models import RNNGenerator3, Discriminator, AttnShaper, RNNShaper
 
 
 
@@ -31,7 +31,7 @@ def get_parser():
     parser.add_argument(
             "--window",
             type=int,
-            default='500',
+            default='900',
             help='number of samples window')
     parser.add_argument(
             "--epochs",
@@ -71,7 +71,7 @@ def get_parser():
     parser.add_argument(
             "--hinge",
             type=float,
-            default='0.35',
+            default='0.3',
             help='noise amp scale')
     parser.add_argument(
             "--gamma",
@@ -81,13 +81,13 @@ def get_parser():
     parser.add_argument(
             "--victim",
             type=str,
-            choices=['parsec','video','video_aml','parsec_aml'],
+            choices=['parsec','video','video_aml','parsec_aml','onlyparsec','splash2x'],
             default='parsec',
             help='victim application domain')
     parser.add_argument(
             "--victimdir",
             type=str,
-            default=None,
+            default="shaper_logs_old",
             help='victim application domain')
     parser.add_argument(
             "--lambda_h",
@@ -192,12 +192,13 @@ if __name__ == '__main__':
 
     clf = CNNCLF(dataset.window).cuda()
     clf_v = CNNCLF(dataset.window).cuda()
-    nlabel = 10 if args.victim == 'parsec' else 5
+    nlabel = len(dataset.labels)
     disc = Discriminator(512, nlabel, dataset.window).cuda()
     if args.gen == 'rnn3':
         gen = RNNGenerator3(args.dim, minpower=dataset.minpower, maxpower=dataset.maxpower).cuda()
     elif args.gen == 'shaper':
         gen = AttnShaper(args.dim,minpower=dataset.minpower, maxpower=dataset.maxpower).cuda()
+        #gen = RNNShaper(args.dim,minpower=dataset.minpower, maxpower=dataset.maxpower).cuda()
 
 
     if os.path.isfile('./best_{}_{}_{}.pth'.format(args.victim,args.gen, args.dim)) and not args.fresh:

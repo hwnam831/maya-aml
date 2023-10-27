@@ -31,3 +31,4 @@ maya_5ms/
 sysid/
 shaper_logs/
 shaper_logs_old/
+*_logs*/

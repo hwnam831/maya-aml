@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, random_split
 import random
+import argparse
 
 class MayaDataset(Dataset):
     def __init__(self, logdir, minpower, maxpower, window=1000, labels='video', offset=50):
@@ -17,7 +18,7 @@ class MayaDataset(Dataset):
         self.matcher = re.compile(r"(.+)_(\d+)_log\.txt")
         self.dir = logdir
         self.filelist=[]
-        assert labels in ['parsec','video']
+        assert labels in ['parsec','video','onlyparsec','splash2x']
         self.labels = {
                 'parkrun':0,
                 'riverbed':1,
@@ -37,6 +38,22 @@ class MayaDataset(Dataset):
                 'splash2x.volrend':7,
                 'splash2x.water_nsquared':8,
                 'splash2x.water_spatial':9
+            }
+        elif labels=='onlyparsec':
+            self.labels ={
+                'blackscholes':0,
+                'bodytrack':1,
+                'canneal':2,
+                'freqmine':3,
+                'vips':4,
+                'streamcluster':5,
+            }
+        elif labels=='splash2x':
+            self.labels ={
+                'splash2x.radiosity':0,
+                'splash2x.volrend':1,
+                'splash2x.water_nsquared':2,
+                'splash2x.water_spatial':3
             }
         elif labels=='video':
             self.labels = {
@@ -135,10 +152,23 @@ class CNNCLF(nn.Module):
         return out
 
 if __name__ == '__main__':
-    logdir = sys.argv[1]
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+            "--victim",
+            type=str,
+            choices=['parsec','video','video_aml','parsec_aml','onlyparsec','splash2x'],
+            default='parsec',
+            help='victim application domain')
+    parser.add_argument(
+            "--victimdir",
+            type=str,
+            default="shaper_logs_old",
+            help='victim application domain')
+    args = parser.parse_args()
+    logdir = args.victimdir
     print(logdir)
     #dataset = MayaDataset(logdir, minpower=25, maxpower=225, window=430)
-    dataset = MayaDataset(logdir, minpower=30, maxpower=160, window=500, labels='parsec')
+    dataset = MayaDataset(logdir, minpower=30, maxpower=250, window=432, labels=args.victim)
     trainlen = (dataset.__len__()*3)//4
     vallen = dataset.__len__() - trainlen
     print("Splitting into train:{}, val:{}".format(trainlen,vallen))

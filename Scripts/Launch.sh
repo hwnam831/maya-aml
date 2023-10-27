@@ -254,7 +254,7 @@ else
     time1=$(date +%s)
     su hwnam -c "/home/hwnam/parsec-3.0/bin/parsecmgmt -a run -p $APPS -i simlarge" > $APPS.trace
     time2=$(date +%s)
-    stime=$((20-wtime-time2+time1))
+    stime=$((10-wtime))
     echo $((time2-time1))"s elapsed"
     sleep $stime
 fi

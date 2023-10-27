@@ -1,4 +1,5 @@
 mkdir -p maya_logs
+bash setuserspace.sh
 ./maya_experiment.sh canneal $1 $2; 
 ./maya_experiment.sh freqmine $1 $2; 
 ./maya_experiment.sh vips $1 $2; 

@@ -285,7 +285,44 @@ class AttnShaper(nn.Module):
         signal = torch.clamp(signal,min=0,max=1)
         signal = signal.view(x.shape[0],-1)[:,:x.shape[1]]
 
-        return signal-x
+        return signal
+
+class RNNShaper(nn.Module):
+    def __init__(self, dim=64, history=32, window=8, minpower=25.0, maxpower=225.0, amp=2.0, n_patterns=32):
+        super().__init__()
+        self.history=history
+        self.window=window
+        self.n_patterns=n_patterns
+        self.dim = dim
+        self.amp = amp
+        self.conv1 = nn.Sequential(
+            nn.Conv1d(1,dim,history, stride=window),
+            nn.ReLU(),
+        )
+
+        self.keys=nn.GRU(dim, dim, num_layers=1)
+        self.offsets = nn.Linear(dim,1)
+        self.relu6 = nn.ReLU6()
+        #self.offsetlayer = nn.Linear(dim,window)
+        #noiselevel = torch.arange(n_patterns,dtype=torch.float32).view(n_patterns,1)/n_patterns
+        #self.register_buffer('noiselevel',noiselevel, persistent=False)
+    def forward(self, x):
+        
+        padded = F.pad(x,(self.history-1, 0))
+        
+        out = self.conv1(padded[:,None,:]).permute(2,0,1) #N,C,S -> S,N,C
+        out = F.dropout(out,0.25)
+        attn_scores, _ = self.keys(out)
+        
+        
+        offset = F.hardsigmoid(self.offsets(attn_scores)).expand(attn_scores.shape[0],attn_scores.shape[1],self.window)
+        noise = torch.randn_like(offset) * offset/2
+        
+        signal = (offset+noise).permute(1,0,2).reshape(x.shape[0],-1)[:,:x.shape[1]]
+        signal = torch.clamp(signal,min=0,max=1)
+        signal = signal.view(x.shape[0],-1)[:,:x.shape[1]]
+
+        return signal
 
 class ShaperInference(nn.Module):
     def __init__(self, shaper):

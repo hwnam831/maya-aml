@@ -1,4 +1,5 @@
 mkdir -p shaper_logs
+bash setuserspace.sh
 ./shaper_experiment.sh canneal $1 $2; 
 ./shaper_experiment.sh freqmine $1 $2; 
 ./shaper_experiment.sh vips $1 $2; 
