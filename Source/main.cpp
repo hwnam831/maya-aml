@@ -128,8 +128,8 @@ MaskGenType getMaskType(std::map<std::string, std::string> args) {
     } else if (maskName.compare("Preset") == 0) {
         return MaskGenType::Preset;
     } else if (maskName.compare("AML") == 0) {
-        return MaskGenType::Preset;
-    } else if (maskName.compare("Shaper") == 0) {
+        return MaskGenType::Shaper;
+    } else if (maskName.compare("Defender") == 0) {
         return MaskGenType::Shaper;
     } else {
         std::cout << "Mask name " << maskName << " is invalid. It should be one of Constant, Uniform, Gauss, GaussSine, Sine, Preset, AML" << std::endl;

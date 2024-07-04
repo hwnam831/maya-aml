@@ -162,7 +162,7 @@ if __name__ == '__main__':
     parser.add_argument(
             "--victimdir",
             type=str,
-            default="shaper_logs_old",
+            default="defender_logs",
             help='victim application domain')
     args = parser.parse_args()
     logdir = args.victimdir

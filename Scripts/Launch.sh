@@ -181,8 +181,10 @@ trap stopall SIGINT
 stopall
 startall
 
+PARSECDIR=/home/hwnam/parsec-3.0/
+
 if [[ "$APPS" == "yourapp" ]]; then
-    su hwnam -c "/home/hwnam/parsec-3.0/bin/parsecmgmt -a run -p blackscholes -i native" > blackscholes.trace
+    su hwnam -c "$PARSECDIR/bin/parsecmgmt -a run -p blackscholes -i native" > blackscholes.trace
 	sleep 1
 elif [[ "$APPS" == "empty" ]];then
     echo -n "Starting app empty at time " > $OUTFILE
@@ -193,66 +195,16 @@ elif [[ "$APPS" == "empty" ]];then
     echo -n "Completed app empty at time " >> $OUTFILE
     date +%s.%N >> $OUTFILE
 elif [[ "$APPS" == "swaptions" ]];then
-    su hwnam -c "/home/hwnam/parsec-3.0/bin/parsecmgmt -a run -p swaptions -i native" > swaptions.trace
+    su hwnam -c "$PARSECDIR/bin/parsecmgmt -a run -p swaptions -i native" > swaptions.trace
 	sleep 1
 elif [[ "$APPS" == "barnes" ]];then
-    su hwnam -c "/home/hwnam/parsec-3.0/bin/parsecmgmt -a run -p splash2x.barnes -i native" > barnes.trace
+    su hwnam -c "$PARSECDIR/bin/parsecmgmt -a run -p splash2x.barnes -i native" > barnes.trace
 	sleep 1
-elif [[ "$APPS" == "parkrun" ]];then
-    #wtime=$(($RANDOM%4+1))
-    #sleep $wtime
-    time1=$(date +%s)
-    su hwnam -c "ffmpeg -i /home/hwnam/vlc/$APPS.y4m -threads 4 -hide_banner -vcodec libx264 /home/hwnam/vlc/$APPS.mp4" > $APPS.trace
-    time2=$(date +%s)
-    #stime=$((40-wtime-time2+time1))
-    echo $((time2-time1))"s elapsed"
-    #sleep $stime
-    rm /home/hwnam/vlc/$APPS.mp4
-elif [[ "$APPS" == "riverbed" ]];then
-    #wtime=$(($RANDOM%4+1))
-    #sleep $wtime
-    time1=$(date +%s)
-    su hwnam -c "ffmpeg -i /home/hwnam/vlc/$APPS.y4m -threads 4 -hide_banner -vcodec libx264 /home/hwnam/vlc/$APPS.mp4" > $APPS.trace
-    time2=$(date +%s)
-    #stime=$((40-wtime-time2+time1))
-    echo $((time2-time1))"s elapsed"
-    #sleep $stime
-    rm /home/hwnam/vlc/$APPS.mp4
-elif [[ "$APPS" == "sunflower" ]];then
-    #wtime=$(($RANDOM%4+1))
-    #sleep $wtime
-    time1=$(date +%s)
-    su hwnam -c "ffmpeg -i /home/hwnam/vlc/$APPS.y4m -threads 4 -hide_banner -vcodec libx264 /home/hwnam/vlc/$APPS.mp4" > $APPS.trace
-    time2=$(date +%s)
-    #stime=$((40-wtime-time2+time1))
-    echo $((time2-time1))"s elapsed"
-    #sleep $stime
-    rm /home/hwnam/vlc/$APPS.mp4
-elif [[ "$APPS" == "tractor" ]];then
-    #wtime=$(($RANDOM%4+1))
-    #sleep $wtime
-    time1=$(date +%s)
-    su hwnam -c "ffmpeg -i /home/hwnam/vlc/$APPS.y4m -threads 4 -hide_banner -vcodec libx264 /home/hwnam/vlc/$APPS.mp4" > $APPS.trace
-    time2=$(date +%s)
-    #stime=$((40-wtime-time2+time1))
-    echo $((time2-time1))"s elapsed"
-    #sleep $stime
-    rm /home/hwnam/vlc/$APPS.mp4
-elif [[ "$APPS" == "wind" ]];then
-    #wtime=$(($RANDOM%4+1))
-    #sleep $wtime
-    time1=$(date +%s)
-    su hwnam -c "ffmpeg -i /home/hwnam/vlc/$APPS.y4m -threads 4 -hide_banner -vcodec libx264 /home/hwnam/vlc/$APPS.mp4" > $APPS.trace
-    time2=$(date +%s)
-    #stime=$((40-wtime-time2+time1))
-    echo $((time2-time1))"s elapsed"
-    #sleep $stime
-    rm /home/hwnam/vlc/$APPS.mp4
 else
     wtime=$(($RANDOM%3+1))
     sleep $wtime
     time1=$(date +%s)
-    su hwnam -c "/home/hwnam/parsec-3.0/bin/parsecmgmt -a run -p $APPS -i simlarge" > $APPS.trace
+    su hwnam -c "$PARSECDIR/bin/parsecmgmt -a run -p $APPS -i simlarge" > $APPS.trace
     time2=$(date +%s)
     stime=$((10-wtime))
     echo $((time2-time1))"s elapsed"
