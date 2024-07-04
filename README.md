@@ -15,12 +15,12 @@ You can do either of followings:
 
 
 ## Defending the system with the pre-trained defender
-1. Running ```./defender_wrapper.sh 0 [samplecount]``` will turn on the Maya defense with Defensive ML, and collect the PARSEC benchmark traces while the defense is active. Samplecount should be larger than 100 for the next step. 
+1. Running ```./defender_wrapper.sh 0 [samplecount]``` will turn on the Maya defense with Defensive ML, and collect the PARSEC benchmark traces while the defense is active. Recommended samplecount: 100 (total 1000 traces for 10 benchmarks). It will take 5~6 hours to collect 1000 traces.
 2. Running ```python MayaDataset.py --victimdir defender_logs``` will emulate the attack on the power side-channel, giving the CNN accuracy.
 
 ## Training a new defender
 
-1. Run ```./wrapper.sh 0 [samplecount]``` to collect unprotected traces for PARSEC benchmark runs. Modify the numbers if needed.
+1. Run ```./wrapper.sh 0 [samplecount]``` to collect unprotected traces for PARSEC benchmark runs. Recommended samplecount: 400 (total 4000 traces). It will take a full day to collect 4000 traces.
 2. Run ```python DefensiveML.py``` to train the ML defender.
 3. Change name of the output pth file ```cp parsec_shaper_64_[...].pth best_shaper_64.pth```
 4. Follow shaperToScript.ipynb to get the jit-traced cpuscript_parsec_shaper_64.pt. Copy it under Controller/ directory.  
